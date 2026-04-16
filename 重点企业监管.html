@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>智慧交通综合管理系统 - 重点企业监管</title>
+  <!-- 引入ECharts图表库 -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  
+  <!-- 引入HLS.js用于播放HLS视频流 -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+  <!-- 引入Font Awesome图标 -->
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Microsoft YaHei", sans-serif;
+    }
+    body {
+      background: #051022;
+      color: #e0f2ff;
+      overflow-x: hidden;
+      position: relative;
+    }
+    /* 电路板背景特效 */
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cpath d='M0 0 L100 0 L100 100 L0 100 Z' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M0 0 L100 100' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M100 0 L0 100' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Ccircle cx='25' cy='25' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='75' cy='25' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='25' cy='75' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='75' cy='75' r='1' fill='%232AC8FF'/%3E%3C/svg%3E");
+      background-size: 100px 100px;
+      opacity: 0.15;
+      z-index: -1;
+    }
+    
+    body::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        linear-gradient(0deg, transparent 49%, rgba(42, 200, 255, 0.03) 50%, transparent 51%),
+        linear-gradient(90deg, transparent 49%, rgba(15, 198, 194, 0.03) 50%, transparent 51%),
+        radial-gradient(circle at 20% 30%, rgba(42, 200, 255, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(15, 198, 194, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(30, 90, 158, 0.03) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: -1;
+    }
+    
+    .tech-grid {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(rgba(42, 200, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(42, 200, 255, 0.05) 1px, transparent 1px);
+      background-size: 50px 50px;
+      z-index: -1;
+      pointer-events: none;
+    }
+    
+    .tech-grid::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        radial-gradient(circle at 25% 25%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 75% 25%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 25% 75%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 75% 75%, rgba(42, 200, 255, 0.1) 0%, transparent 25%);
+      z-index: -1;
+    }
+    
+    .data-stream {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    
+    .data-stream::before {
+      content: "";
+      position: absolute;
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(180deg, transparent, rgba(42, 200, 255, 0.3), transparent);
+      animation: streamMove 8s linear infinite;
+      left: 10%;
+    }
+    
+    .data-stream::after {
+      content: "";
+      position: absolute;
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(180deg, transparent, rgba(15, 198, 194, 0.3), transparent);
+      animation: streamMove 8s linear infinite reverse;
+      right: 10%;
+    }
+    
+    @keyframes streamMove {
+      0% { top: 0; }
+      100% { top: 100%; }
+    }
+    
+    /* 电路板线路 */
+    .circuit-line {
+      position: absolute;
+      background: #2AC8FF;
+      opacity: 0.2;
+      z-index: -1;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: 300px 1fr 350px;
+      grid-template-rows: 60px calc(100vh - 70px);
+      gap: 15px;
+      padding: 15px;
+      position: relative;
+      z-index: 1;
+    }
+    .header {
+      grid-column: 1 / 4;
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      line-height: 60px;
+      background: linear-gradient(90deg, #0a2440, #123a63);
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(42, 200, 255, 0.2);
+    }
+    .left-panel,
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .card {
+      background: linear-gradient(145deg, #0d2540, #15355a);
+      border-radius: 12px;
+      padding: 20px;
+      flex: 1;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #1a4c7d;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, #2AC8FF, #66CCFF, #2AC8FF);
+      animation: glow 3s linear infinite;
+      background-size: 200% auto;
+    }
+    @keyframes glow {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+    .card-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #1f4b7c;
+      display: flex;
+      align-items: center;
+    }
+    .card-title i {
+      margin-right: 10px;
+      color: #2AC8FF;
+      text-shadow: 0 0 8px rgba(42, 200, 255, 0.6);
+    }
+    /* 企业统计 */
+    .enterprise-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .enterprise-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      background: rgba(31, 75, 124, 0.3);
+      border-radius: 6px;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #1a4c7d;
+    }
+    .enterprise-item::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(45deg, transparent, rgba(42, 200, 255, 0.1), transparent);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.5s;
+    }
+    .enterprise-item:hover::before {
+      transform: scaleX(1);
+    }
+    .enterprise-item:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 0 15px rgba(42, 200, 255, 0.3);
+    }
+    .enterprise-item i {
+      font-size: 24px;
+      color: #2AC8FF;
+      margin-bottom: 8px;
+      text-shadow: 0 0 10px rgba(42, 200, 255, 0.7);
+    }
+    .enterprise-item .num {
+      font-size: 16px;
+      font-weight: bold;
+    }
+    .enterprise-item .label {
+      font-size: 12px;
+      color: #99CCFF;
+      margin-top: 4px;
+    }
+    /* 预警统计 */
+    .warning-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .warning-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      border-radius: 8px;
+      transition: all 0.3s;
+    }
+    .warning-item.critical {
+      background: rgba(255, 51, 0, 0.2);
+      border: 1px solid #FF3300;
+    }
+    .warning-item.major {
+      background: rgba(255, 153, 0, 0.2);
+      border: 1px solid #FF9900;
+    }
+    .warning-item.minor {
+      background: rgba(42, 200, 255, 0.2);
+      border: 1px solid #2AC8FF;
+    }
+    .warning-item .value {
+      font-size: 20px;
+      font-weight: bold;
+      margin: 8px 0;
+    }
+    .warning-item .label {
+      font-size: 12px;
+      text-align: center;
+    }
+    /* 表格样式 */
+    .enterprise-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .enterprise-table th,
+    .enterprise-table td {
+      border: 1px solid #1f4b7c;
+      padding: 10px;
+      text-align: center;
+    }
+    .enterprise-table th {
+      background: #1F4B7C;
+      color: #e0f2ff;
+      font-weight: bold;
+    }
+    .enterprise-table tr:nth-child(even) {
+      background: rgba(31, 75, 124, 0.3);
+    }
+    .enterprise-table tr:hover {
+      background: rgba(42, 200, 255, 0.1);
+    }
+    /* 图表容器 */
+    .chart-container {
+      width: 100%;
+      height: 200px;
+    }
+    .warning-chart {
+      height: 220px;
+    }
+    .analysis-chart {
+      height: 240px;
+    }
+    /* 企业详情卡片 */
+    .enterprise-detail {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .detail-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(31, 75, 124, 0.5);
+    }
+    .detail-item strong {
+      color: #2AC8FF;
+    }
+    /* 预警信息卡片 */
+    .warning-item-detail {
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      border: 1px solid #1f4b7c;
+      background: rgba(31, 75, 124, 0.2);
+      transition: all 0.3s;
+    }
+    .warning-item-detail:hover {
+      background: rgba(31, 75, 124, 0.4);
+      border-color: #2AC8FF;
+      transform: translateX(5px);
+    }
+    .warning-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .warning-type {
+      font-weight: bold;
+      color: #FF3300;
+    }
+    .warning-time {
+      font-size: 12px;
+      color: #99CCFF;
+    }
+    .warning-info {
+      font-size: 14px;
+    }
+    /* 企业筛选按钮组 */
+    .filter-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+    .filter-btn {
+      padding: 6px 12px;
+      background: rgba(31, 75, 124, 0.3);
+      border: 1px solid #1f4b7c;
+      color: #e0f2ff;
+      border-radius: 15px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .filter-btn:hover {
+      background: #2AC8FF;
+      border-color: #2AC8FF;
+      color: #051022;
+    }
+    .filter-btn.active {
+      background: #2AC8FF;
+      border-color: #2AC8FF;
+      color: #051022;
+    }
+    /* 返回主页面按钮 */
+    .back-button {
+      position: absolute;
+      top: 30px;
+      left: 30px;
+      z-index: 100;
+      padding: 8px 16px;
+      background: rgba(31, 75, 124, 0.8);
+      border: 1px solid #2AC8FF;
+      color: #e0f2ff;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 0 8px rgba(42, 200, 255, 0.2);
+    }
+    .back-button:hover {
+      background: #2AC8FF;
+      color: #051022;
+      transform: translateX(-5px);
+      box-shadow: 0 0 15px rgba(42, 200, 255, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <div class="tech-grid"></div>
+  <div class="data-stream"></div>
+  
+  <!-- 电路板线路 -->
+  <div class="circuit-line" style="top: 100px; left: 50px; width: 300px; height: 1px;"></div>
+  <div class="circuit-line" style="top: 200px; left: 100px; width: 400px; height: 1px;"></div>
+  <div class="circuit-line" style="top: 300px; left: 150px; width: 250px; height: 1px;"></div>
+  <div class="circuit-line" style="top: 400px; left: 50px; width: 350px; height: 1px;"></div>
+  <div class="circuit-line" style="top: 500px; left: 120px; width: 300px; height: 1px;"></div>
+  <div class="circuit-line" style="top: 150px; left: 500px; width: 1px; height: 200px;"></div>
+  <div class="circuit-line" style="top: 100px; left: 600px; width: 1px; height: 300px;"></div>
+  <div class="circuit-line" style="top: 120px; left: 700px; width: 1px; height: 250px;"></div>
+  <div class="circuit-line" style="top: 180px; left: 800px; width: 1px; height: 350px;"></div>
+  
+  <!-- 返回主页面按钮 -->
+  <button class="back-button" onclick="window.location.href='index.html'">
+    <i class="fa fa-arrow-left"></i> 返回主页面
+  </button>
+  
+  <div class="container">
+    <!-- 顶部标题 -->
+    <div class="header">重点企业监管系统</div>
+    
+    <!-- 左侧面板 -->
+    <div class="left-panel">
+      <!-- 企业基本信息统计 -->
+      <div class="card">
+        <div class="card-title"><i class="fa fa-building"></i>企业基本信息</div>
+        <div class="enterprise-stats">
+          <div class="enterprise-item">
+            <i class="fa fa-industry"></i>
+            <span class="num">85</span>
+            <span class="label">重点监管企业</span>
+          </div>
+          <div class="enterprise-item">
+            <i class="fa fa-truck"></i>
+            <span class="num">3,256</span>
+            <span class="label">监管车辆总数</span>
+          </div>
+          <div class="enterprise-item">
+            <i class="fa fa-user"></i>
+            <span class="num">4,820</span>
+            <span class="label">驾驶人总数</span>
+          </div>
+          <div class="enterprise-item">
+            <i class="fa fa-exclamation-triangle"></i>
+            <span class="num">127</span>
+            <span class="label">预警企业</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 企业类型分布 -->
+      <div class="card">
+        <div class="card-title"><i class="fa fa-pie-chart"></i>企业类型分布</div>
+        <div class="chart-container" id="enterprise-type-chart"></div>
+      </div>
+      
+      <!-- 实时预警统计 -->
+      <div class="card">
+        <div class="card-title"><i class="fa fa-bell"></i>实时预警统计</div>
+        <div class="warning-stats">
+          <div class="warning-item critical">
+            <i class="fa fa-exclamation-circle" style="color: #FF3300; font-size: 24px;"></i>
+            <span class="value" style="color: #FF3300;">24</span>
+            <span class="label">重大预警</span>
+          </div>
+          <div class="warning-item major">
+            <i class="fa fa-warning" style="color: #FF9900; font-size: 24px;"></i>
+            <span class="value" style="color: #FF9900;">56</span>
+            <span class="label">较大预警</span>
+          </div>
+          <div class="warning-item minor">
+            <i class="fa fa-info-circle" style="color: #2AC8FF; font-size: 24px;"></i>
+            <span class="value" style="color: #2AC8FF;">47</span>
+            <span class="label">一般预警</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 中间主区域 -->
+    <div class="map-panel">
+      <!-- 重点企业详细信息 -->
+      <div class="card" style="height: 100%; display: flex; flex-direction: column;">
+        <div class="card-title"><i class="fa fa-search"></i>企业监管详情</div>
+        
+        <!-- 企业筛选按钮组 -->
+        <div class="filter-buttons">
+          <button class="filter-btn active" data-type="all">全部企业</button>
+          <button class="filter-btn" data-type="logistics">物流运输</button>
+          <button class="filter-btn" data-type="construction">建筑施工</button>
+          <button class="filter-btn" data-type="manufacturing">生产制造</button>
+          <button class="filter-btn" data-type="warning">预警企业</button>
+        </div>
+        
+        <!-- 数据统计概览 -->
+        <div class="data-overview" style="
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 10px;
+          margin: 15px 0;
+          padding: 10px;
+          background: rgba(31, 75, 124, 0.3);
+          border-radius: 8px;
+          border: 1px solid #1a4c7d;
+        ">
+          <div class="overview-item" style="text-align: center;">
+            <div style="font-size: 12px; color: #99CCFF;">平均车辆数</div>
+            <div style="font-size: 18px; font-weight: bold; color: #2AC8FF;">166</div>
+          </div>
+          <div class="overview-item" style="text-align: center;">
+            <div style="font-size: 12px; color: #99CCFF;">平均驾驶人数</div>
+            <div style="font-size: 18px; font-weight: bold; color: #2AC8FF;">209</div>
+          </div>
+          <div class="overview-item" style="text-align: center;">
+            <div style="font-size: 12px; color: #99CCFF;">平均预警次数</div>
+            <div style="font-size: 18px; font-weight: bold; color: #FF9900;">8.75</div>
+          </div>
+          <div class="overview-item" style="text-align: center;">
+            <div style="font-size: 12px; color: #99CCFF;">企业合格率</div>
+            <div style="font-size: 18px; font-weight: bold; color: #00CC66;">87.5%</div>
+          </div>
+        </div>
+        
+        <!-- 企业列表表格 -->
+        <div style="flex: 1; overflow-y: auto; margin-top: 5px;">
+          <table class="enterprise-table">
+            <thead>
+              <tr>
+                <th>企业名称</th>
+                <th>企业类型</th>
+                <th>车辆数</th>
+                <th>驾驶人数</th>
+                <th>预警次数</th>
+                <th>信用等级</th>
+                <th>成立时间</th>
+                <th>联系电话</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="enterprise-row" data-type="logistics" data-warning="true">
+                <td>通达物流有限公司</td>
+                <td>物流运输</td>
+                <td>245</td>
+                <td>328</td>
+                <td>18</td>
+                <td style="color: #FF3300;">D</td>
+                <td>2010-05-15</td>
+                <td>0791-88776655</td>
+              </tr>
+              <tr class="enterprise-row" data-type="construction" data-warning="true">
+                <td>恒信建筑工程公司</td>
+                <td>建筑施工</td>
+                <td>126</td>
+                <td>152</td>
+                <td>12</td>
+                <td style="color: #FF9900;">C</td>
+                <td>2008-08-20</td>
+                <td>0791-88665544</td>
+              </tr>
+              <tr class="enterprise-row" data-type="manufacturing" data-warning="false">
+                <td>东方制造集团</td>
+                <td>生产制造</td>
+                <td>89</td>
+                <td>105</td>
+                <td>3</td>
+                <td style="color: #2AC8FF;">B</td>
+                <td>2005-11-10</td>
+                <td>0791-88554433</td>
+              </tr>
+              <tr class="enterprise-row" data-type="logistics" data-warning="false">
+                <td>顺丰速运有限公司</td>
+                <td>物流运输</td>
+                <td>320</td>
+                <td>415</td>
+                <td>7</td>
+                <td style="color: #2AC8FF;">B</td>
+                <td>2012-03-25</td>
+                <td>0791-88443322</td>
+              </tr>
+              <tr class="enterprise-row" data-type="construction" data-warning="true">
+                <td>南方建筑工程局</td>
+                <td>建筑施工</td>
+                <td>178</td>
+                <td>210</td>
+                <td>9</td>
+                <td style="color: #FF9900;">C</td>
+                <td>2006-09-18</td>
+                <td>0791-88332211</td>
+              </tr>
+              <tr class="enterprise-row" data-type="manufacturing" data-warning="false">
+                <td>华泰制造有限公司</td>
+                <td>生产制造</td>
+                <td>65</td>
+                <td>82</td>
+                <td>2</td>
+                <td style="color: #00CC66;">A</td>
+                <td>2003-07-05</td>
+                <td>0791-88221100</td>
+              </tr>
+              <tr class="enterprise-row" data-type="logistics" data-warning="true">
+                <td>快捷物流股份公司</td>
+                <td>物流运输</td>
+                <td>210</td>
+                <td>275</td>
+                <td>15</td>
+                <td style="color: #FF9900;">C</td>
+                <td>2011-01-30</td>
+                <td>0791-88110099</td>
+              </tr>
+              <tr class="enterprise-row" data-type="construction" data-warning="false">
+                <td>远大建设工程公司</td>
+                <td>建筑施工</td>
+                <td>98</td>
+                <td>115</td>
+                <td>4</td>
+                <td style="color: #2AC8FF;">B</td>
+                <td>2009-04-12</td>
+                <td>0791-88009988</td>
+              </tr>
+              <!-- 新增企业数据 -->
+              <tr class="enterprise-row" data-type="logistics" data-warning="false">
+                <td>安捷运输有限公司</td>
+                <td>物流运输</td>
+                <td>156</td>
+                <td>203</td>
+                <td>5</td>
+                <td style="color: #2AC8FF;">B</td>
+                <td>2013-08-08</td>
+                <td>0791-88997766</td>
+              </tr>
+              <tr class="enterprise-row" data-type="manufacturing" data-warning="true">
+                <td>诚信电子科技公司</td>
+                <td>生产制造</td>
+                <td>102</td>
+                <td>135</td>
+                <td>10</td>
+                <td style="color: #FF9900;">C</td>
+                <td>2015-02-16</td>
+                <td>0791-88776655</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- 企业详情弹窗 (默认隐藏) -->
+        <div id="enterprise-detail-modal" style="
+          display: none;
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 600px;
+          max-height: 80vh;
+          background: linear-gradient(145deg, #0d2540, #15355a);
+          border-radius: 12px;
+          border: 2px solid #2AC8FF;
+          padding: 20px;
+          z-index: 1000;
+          overflow-y: auto;
+          box-shadow: 0 0 30px rgba(42, 200, 255, 0.3);
+        ">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="color: #2AC8FF; font-size: 20px;">企业详细信息</h3>
+            <button onclick="document.getElementById('enterprise-detail-modal').style.display = 'none'" style="
+              background: #1F4B7C;
+              border: 1px solid #2AC8FF;
+              color: #e0f2ff;
+              padding: 5px 10px;
+              border-radius: 5px;
+              cursor: pointer;
+            ">关闭</button>
+          </div>
+          <div id="modal-content"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 右侧面板 -->
+    <div class="right-panel">
+      <!-- 企业实时预警信息 -->
+      <div class="card">
+        <div class="card-title"><i class="fa fa-bell-o"></i>实时预警信息</div>
+        
+        <!-- 预警信息列表 -->
+        <div style="height: 300px; overflow-y: auto;">
+          <div class="warning-item-detail">
+            <div class="warning-header">
+              <span class="warning-type">重大 - 超速行驶</span>
+              <span class="warning-time">10分钟前</span>
+            </div>
+            <div class="warning-info">
+              企业：通达物流有限公司<br>
+              车辆：赣A·12345<br>
+              驾驶人：张三<br>
+              地点：紫阳大道<br>
+              时速：120km/h（限速80km/h）
+            </div>
+          </div>
+          
+          <div class="warning-item-detail">
+            <div class="warning-header">
+              <span class="warning-type">重大 - 疲劳驾驶</span>
+              <span class="warning-time">25分钟前</span>
+            </div>
+            <div class="warning-info">
+              企业：快捷物流股份公司<br>
+              车辆：赣A·56789<br>
+              驾驶人：李四<br>
+              连续驾驶：4小时20分钟
+            </div>
+          </div>
+          
+          <div class="warning-item-detail">
+            <div class="warning-header">
+              <span style="color: #FF9900; font-weight: bold;">较大 - 违规停车</span>
+              <span class="warning-time">1小时前</span>
+            </div>
+            <div class="warning-info">
+              企业：恒信建筑工程公司<br>
+              车辆：赣A·24680<br>
+              驾驶人：王五<br>
+              地点：高新大道禁停区
+            </div>
+          </div>
+          
+          <div class="warning-item-detail">
+            <div class="warning-header">
+              <span style="color: #FF9900; font-weight: bold;">较大 - 闯信号灯</span>
+              <span class="warning-time">1小时30分钟前</span>
+            </div>
+            <div class="warning-info">
+              企业：南方建筑工程局<br>
+              车辆：赣A·13579<br>
+              驾驶人：赵六<br>
+              地点：紫阳大道与创新路交叉口
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 企业预警趋势分析 -->
+      <div class="card">
+        <div class="card-title"><i class="fa fa-line-chart"></i>预警趋势分析</div>
+        <div class="chart-container warning-chart" id="warning-trend-chart"></div>
+      </div>
+      
+      <!-- 企业风险评估 -->
+      <div class="card">
+        <div class="card-title"><i class="fa fa-bar-chart"></i>企业风险评估</div>
+        <div class="chart-container analysis-chart" id="risk-analysis-chart"></div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // 初始化企业类型分布饼图
+    function initEnterpriseTypeChart() {
+      const chart = echarts.init(document.getElementById('enterprise-type-chart'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        series: [{
+          type: 'pie',
+          radius: ['40%', '70%'],
+          data: [
+            { value: 45, name: '物流运输' },
+            { value: 30, name: '建筑施工' },
+            { value: 15, name: '生产制造' },
+            { value: 10, name: '其他' }
+          ],
+          label: {
+            show: true,
+            color: '#e0f2ff',
+            formatter: '{b}: {c}家',
+            shadowBlur: 15,
+            shadowColor: 'rgba(42, 200, 255, 0.6)'
+          },
+          itemStyle: {
+            borderRadius: 8,
+            borderColor: '#1F4B7C',
+            borderWidth: 1,
+            shadowBlur: 15,
+            shadowColor: 'rgba(42, 200, 255, 0.4)'
+          },
+          color: ['#2AC8FF', '#66CCFF', '#99DDFF', '#CCEDFF'],
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 25,
+              shadowColor: 'rgba(42, 200, 255, 0.8)',
+              scale: 1.1
+            }
+          }
+        }],
+        tooltip: {
+          trigger: 'item',
+          formatter: '{a} <br/>{b}: {c}家 ({d}%)'
+        }
+      });
+      
+      return chart;
+    }
+    
+    // 初始化预警趋势分析折线图
+    function initWarningTrendChart() {
+      const chart = echarts.init(document.getElementById('warning-trend-chart'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: {
+          trigger: 'axis'
+        },
+        legend: {
+          data: ['重大预警', '较大预警', '一般预警'],
+          textStyle: {
+            color: '#e0f2ff'
+          },
+          top: 10  // 稍微调整图例位置，使其不紧贴顶部
+        },
+        grid: {
+          left: '3%',
+          right: '4%',
+          bottom: '12%',  // 从3%增加到12%，给底部留出更多空间
+          containLabel: true
+        },
+        xAxis: {
+          type: 'category',
+          boundaryGap: false,
+          data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+          axisLabel: {
+            color: '#e0f2ff',
+            fontSize: 11  // 适当增加字体大小
+          },
+          axisLine: {
+            lineStyle: {
+              color: '#1F4B7C'
+            }
+          },
+          axisTick: {
+            show: true,  // 显示刻度
+            lineStyle: {
+              color: '#1F4B7C'
+            }
+          }
+        },
+        yAxis: {
+          type: 'value',
+          axisLabel: {
+            color: '#e0f2ff'
+          },
+          splitLine: {
+            lineStyle: {
+              color: '#1F4B7C'
+            }
+          }
+        },
+        series: [
+          {
+            name: '重大预警',
+            type: 'line',
+            stack: 'Total',
+            data: [12, 19, 8, 15, 24, 18, 24],
+            lineStyle: {
+              color: '#FF3300',
+              width: 3
+            },
+            itemStyle: {
+              color: '#FF3300'
+            }
+          },
+          {
+            name: '较大预警',
+            type: 'line',
+            stack: 'Total',
+            data: [22, 35, 28, 33, 42, 38, 56],
+            lineStyle: {
+              color: '#FF9900',
+              width: 3
+            },
+            itemStyle: {
+              color: '#FF9900'
+            }
+          },
+          {
+            name: '一般预警',
+            type: 'line',
+            stack: 'Total',
+            data: [30, 35, 40, 38, 45, 42, 47],
+            lineStyle: {
+              color: '#2AC8FF',
+              width: 3
+            },
+            itemStyle: {
+              color: '#2AC8FF'
+            }
+          }
+        ]
+      });
+      
+      return chart;
+    }
+    
+    // 初始化企业风险评估柱状图
+    function initRiskAnalysisChart() {
+      const chart = echarts.init(document.getElementById('risk-analysis-chart'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            type: 'shadow'
+          }
+        },
+        grid: {
+          left: '3%',
+          right: '4%',
+          bottom: '15%',  // 增加底部空间到15%
+          containLabel: true
+        },
+        xAxis: {
+          type: 'category',
+          data: ['通达物流', '恒信建筑', '东方制造', '顺丰速运', '南方建筑'],
+          axisLabel: {
+            color: '#e0f2ff',
+            fontSize: 10,
+            rotate: 30,
+            interval: 0  // 强制显示所有标签
+          },
+          axisLine: {
+            lineStyle: {
+              color: '#1F4B7C'
+            }
+          },
+          axisTick: {
+            show: true,  // 显示坐标轴刻度
+            lineStyle: {
+              color: '#1F4B7C'
+            }
+          }
+        },
+        yAxis: {
+          type: 'value',
+          name: '风险值',
+          nameTextStyle: {
+            color: '#e0f2ff'
+          },
+          max: 100,
+          axisLabel: {
+            color: '#e0f2ff'
+          },
+          splitLine: {
+            lineStyle: {
+              color: '#1F4B7C'
+            }
+          }
+        },
+        series: [{
+          name: '风险指数',
+          type: 'bar',
+          data: [85, 72, 45, 58, 65],
+          itemStyle: {
+            borderRadius: [8, 8, 0, 0],
+            shadowBlur: 10,
+            shadowColor: 'rgba(42, 200, 255, 0.5)',
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: '#2AC8FF' },
+              { offset: 1, color: '#66CCFF' }
+            ])
+          },
+          barWidth: '60%'
+        }]
+      });
+      
+      return chart;
+    }
+    
+    // 初始化企业筛选功能
+    function initEnterpriseFilter() {
+      const filterBtns = document.querySelectorAll('.filter-btn');
+      const enterpriseRows = document.querySelectorAll('.enterprise-row');
+      const dataOverview = document.querySelector('.data-overview');
+      
+      // 为每行企业添加点击事件
+      enterpriseRows.forEach(row => {
+        row.addEventListener('click', () => {
+          showEnterpriseDetail(row);
+        });
+      });
+      
+      filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          // 移除所有按钮的active类
+          filterBtns.forEach(b => b.classList.remove('active'));
+          // 为当前点击的按钮添加active类
+          btn.classList.add('active');
+          
+          // 获取筛选类型
+          const filterType = btn.getAttribute('data-type');
+          console.log('筛选类型:', filterType);
+          
+          // 根据筛选类型过滤企业列表
+          let visibleCount = 0;
+          enterpriseRows.forEach(row => {
+            const rowType = row.getAttribute('data-type');
+            const isWarning = row.getAttribute('data-warning') === 'true';
+            
+            // 根据筛选条件决定是否显示该行
+            if (filterType === 'all') {
+              row.style.display = '';
+              visibleCount++;
+            } else if (filterType === 'warning') {
+              if (isWarning) {
+                row.style.display = '';
+                visibleCount++;
+              } else {
+                row.style.display = 'none';
+              }
+            } else {
+              if (rowType === filterType) {
+                row.style.display = '';
+                visibleCount++;
+              } else {
+                row.style.display = 'none';
+              }
+            }
+          });
+          
+          // 更新数据概览区域的显示
+          if (visibleCount === 0) {
+            // 如果没有符合条件的企业，显示提示信息
+            if (!document.getElementById('no-data-message')) {
+              const noDataMessage = document.createElement('div');
+              noDataMessage.id = 'no-data-message';
+              noDataMessage.style.cssText = 'text-align: center; padding: 40px; color: #99CCFF; font-size: 16px;';
+              noDataMessage.textContent = '暂无符合条件的企业数据';
+              document.querySelector('.enterprise-table').parentNode.appendChild(noDataMessage);
+            } else {
+              document.getElementById('no-data-message').style.display = '';
+            }
+            dataOverview.style.display = 'none';
+          } else {
+            // 如果有符合条件的企业，隐藏提示信息
+            const noDataMessage = document.getElementById('no-data-message');
+            if (noDataMessage) {
+              noDataMessage.style.display = 'none';
+            }
+            dataOverview.style.display = 'grid';
+          }
+        });
+      });
+    }
+    
+    // 显示企业详细信息
+    function showEnterpriseDetail(row) {
+      const cells = row.querySelectorAll('td');
+      const enterpriseName = cells[0].textContent;
+      const enterpriseType = cells[1].textContent;
+      const vehicleCount = cells[2].textContent;
+      const driverCount = cells[3].textContent;
+      const warningCount = cells[4].textContent;
+      const creditLevel = cells[5].textContent;
+      const establishDate = cells[6].textContent;
+      const contactPhone = cells[7].textContent;
+      
+      // 模拟企业的详细数据
+      const detailData = {
+        name: enterpriseName,
+        type: enterpriseType,
+        vehicles: vehicleCount,
+        drivers: driverCount,
+        warnings: warningCount,
+        credit: creditLevel,
+        establishDate: establishDate,
+        contactPhone: contactPhone,
+        address: getAddressByEnterprise(enterpriseName),
+        legalPerson: getLegalPersonByEnterprise(enterpriseName),
+        businessScope: getBusinessScopeByEnterprise(enterpriseType),
+        safetyRating: getSafetyRatingByCredit(creditLevel),
+        lastInspection: getLastInspectionDate(),
+        nextInspection: getNextInspectionDate()
+      };
+      
+      // 生成详细信息HTML
+      const detailHTML = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div class="detail-row">
+            <strong style="color: #2AC8FF;">企业名称:</strong>
+            <span>${detailData.name}</span>
+          </div>
+          <div class="detail-row">
+            <strong style="color: #2AC8FF;">企业类型:</strong>
+            <span>${detailData.type}</span>
+          </div>
+          <div class="detail-row">
+            <strong style="color: #2AC8FF;">车辆数:</strong>
+            <span>${detailData.vehicles}</span>
+          </div>
+          <div class="detail-row">
+            <strong style="color: #2AC8FF;">驾驶人数:</strong>
+            <span>${detailData.drivers}</span>
+          </div>
+          <div class="detail-row">
+            <strong style="color: #2AC8FF;">预警次数:</strong>
+            <span>${detailData.warnings}</span>
+          </div>
+          <div class="detail-row">
+            <strong style="color: #2AC8FF;">信用等级:</strong>
+            <span style="color: ${getCreditColor(detailData.credit)}">${detailData.credit}</span>
+          </div>
+          <div class="detail-row">
+            <strong style="color: #2AC8FF;">成立时间:</strong>
+            <span>${detailData.establishDate}</span>
+          </div>
+          <div class="detail-row">
+            <strong style="color: #2AC8FF;">联系电话:</strong>
+            <span>${detailData.contactPhone}</span>
+          </div>
+          <div class="detail-row">
+            <strong style="color: #2AC8FF;">企业地址:</strong>
+            <span>${detailData.address}</span>
+          </div>
+          <div class="detail-row">
+            <strong style="color: #2AC8FF;">法定代表人:</strong>
+            <span>${detailData.legalPerson}</span>
+          </div>
+          <div class="detail-row">
+            <strong style="color: #2AC8FF;">经营范围:</strong>
+            <span>${detailData.businessScope}</span>
+          </div>
+          <div class="detail-row">
+            <strong style="color: #2AC8FF;">安全评级:</strong>
+            <span>${detailData.safetyRating}</span>
+          </div>
+          <div class="detail-row">
+            <strong style="color: #2AC8FF;">上次检查:</strong>
+            <span>${detailData.lastInspection}</span>
+          </div>
+          <div class="detail-row">
+            <strong style="color: #2AC8FF;">下次检查:</strong>
+            <span>${detailData.nextInspection}</span>
+          </div>
+        </div>
+        <div style="margin-top: 20px;">
+          <h4 style="color: #2AC8FF; margin-bottom: 10px;">近期预警详情:</h4>
+          <div class="warning-details">
+            ${getRecentWarnings(detailData.name, detailData.warnings)}
+          </div>
+        </div>
+      `;
+      
+      // 设置详情弹窗内容
+      document.getElementById('modal-content').innerHTML = detailHTML;
+      
+      // 显示详情弹窗
+      document.getElementById('enterprise-detail-modal').style.display = 'block';
+    }
+    
+    // 辅助函数：根据企业获取地址
+    function getAddressByEnterprise(name) {
+      const addresses = {
+        '通达物流有限公司': '高新区紫阳大道123号',
+        '恒信建筑工程公司': '东湖区北京西路456号',
+        '东方制造集团': '西湖区洪城路789号',
+        '顺丰速运有限公司': '青山湖区南京东路321号',
+        '南方建筑工程局': '青云谱区解放西路654号',
+        '华泰制造有限公司': '湾里区梅岭大道987号',
+        '快捷物流股份公司': '经开区枫林大道654号',
+        '远大建设工程公司': '红谷滩新区赣江中大道321号',
+        '安捷运输有限公司': '新建区长征路147号',
+        '诚信电子科技公司': '高新区火炬大街258号'
+      };
+      return addresses[name] || '未知地址';
+    }
+    
+    // 辅助函数：根据企业获取法定代表人
+    function getLegalPersonByEnterprise(name) {
+      const persons = {
+        '通达物流有限公司': '张三',
+        '恒信建筑工程公司': '李四',
+        '东方制造集团': '王五',
+        '顺丰速运有限公司': '赵六',
+        '南方建筑工程局': '钱七',
+        '华泰制造有限公司': '孙八',
+        '快捷物流股份公司': '周九',
+        '远大建设工程公司': '吴十',
+        '安捷运输有限公司': '郑一',
+        '诚信电子科技公司': '王二'
+      };
+      return persons[name] || '未知';
+    }
+    
+    // 辅助函数：根据企业类型获取经营范围
+    function getBusinessScopeByEnterprise(type) {
+      const scopes = {
+        '物流运输': '道路货物运输、仓储服务、物流信息咨询',
+        '建筑施工': '房屋建筑工程、市政公用工程、建筑装修装饰工程',
+        '生产制造': '机械设备制造、电子产品生产、零部件加工'
+      };
+      return scopes[type] || '综合服务';
+    }
+    
+    // 辅助函数：根据信用等级获取安全评级
+    function getSafetyRatingByCredit(credit) {
+      const ratings = {
+        'A': '优秀',
+        'B': '良好',
+        'C': '一般',
+        'D': '较差'
+      };
+      return ratings[credit] || '未知';
+    }
+    
+    // 辅助函数：获取信用等级对应的颜色
+    function getCreditColor(credit) {
+      const colors = {
+        'A': '#00CC66',
+        'B': '#2AC8FF',
+        'C': '#FF9900',
+        'D': '#FF3300'
+      };
+      return colors[credit] || '#e0f2ff';
+    }
+    
+    // 辅助函数：获取上次检查日期
+    function getLastInspectionDate() {
+      const date = new Date();
+      date.setDate(date.getDate() - Math.floor(Math.random() * 180));
+      return date.toLocaleDateString('zh-CN');
+    }
+    
+    // 辅助函数：获取下次检查日期
+    function getNextInspectionDate() {
+      const date = new Date();
+      date.setDate(date.getDate() + Math.floor(Math.random() * 180) + 30);
+      return date.toLocaleDateString('zh-CN');
+    }
+    
+    // 辅助函数：获取企业近期预警详情
+    function getRecentWarnings(enterpriseName, warningCount) {
+      if (parseInt(warningCount) === 0) {
+        return '<div style="color: #00CC66; text-align: center; padding: 10px;">近期无预警记录</div>';
+      }
+      
+      const warnings = [
+        '超速行驶', '疲劳驾驶', '违规停车', '闯信号灯', '未按规定路线行驶',
+        '超载', '未系安全带', '违反限行规定', '非法改装', '未按期年检'
+      ];
+      
+      let html = '';
+      const count = Math.min(parseInt(warningCount), 3); // 最多显示3条预警
+      
+      for (let i = 0; i < count; i++) {
+        const warningType = warnings[Math.floor(Math.random() * warnings.length)];
+        const daysAgo = Math.floor(Math.random() * 30) + 1;
+        html += `
+          <div style="margin-bottom: 8px; padding: 8px; background: rgba(31, 75, 124, 0.3); border-radius: 4px;">
+            <div style="color: #FF9900;">${warningType}</div>
+            <div style="color: #99CCFF; font-size: 12px;">${daysAgo}天前</div>
+          </div>
+        `;
+      }
+      
+      return html;
+    }
+  
+    window.addEventListener('load', () => {
+      const enterpriseTypeChart = initEnterpriseTypeChart();
+      const warningTrendChart = initWarningTrendChart();
+      const riskAnalysisChart = initRiskAnalysisChart();
+      
+      initEnterpriseFilter();
+      
+      // 监听窗口大小变化，调整图表
+      window.addEventListener('resize', () => {
+        enterpriseTypeChart.resize();
+        warningTrendChart.resize();
+        riskAnalysisChart.resize();
+      });
+    });
+  </script>
+</body>
+</html>

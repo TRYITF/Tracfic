@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>资源一图化展示</title>
+  <!-- 引入外部资源 -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+  
+  <!-- Tailwind 自定义配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3B82F6',
+            secondary: '#10B981',
+            warning: '#F59E0B',
+            danger: '#EF4444',
+            darkBg: '#0F172A',
+            panelBg: '#1E293B',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  
+  <!-- 自定义工具类 -->
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .scrollbar-thin {
+        scrollbar-width: thin;
+      }
+      .scrollbar-thin::-webkit-scrollbar {
+        width: 4px;
+      }
+      .scrollbar-thin::-webkit-scrollbar-thumb {
+        background-color: rgba(59, 130, 246, 0.5);
+        border-radius: 2px;
+      }
+    }
+  </style>
+  
+  <style>
+    .custom-marker {
+      text-align: center;
+      font-size: 16px;
+      text-shadow: 0 0 3px rgba(0,0,0,0.8);
+    }
+    body, html {
+      height: 100%;
+      margin: 0;
+    }
+    #map {
+      z-index: 1;
+    }
+    .back-button {
+      padding: 8px 16px;
+      background: rgba(31, 75, 124, 0.8);
+      border: 1px solid #2AC8FF;
+      color: #e0f2ff;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .back-button:hover {
+      background: #2AC8FF;
+      color: #051022;
+    }
+    
+    .tech-grid {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(rgba(42, 200, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(42, 200, 255, 0.05) 1px, transparent 1px);
+      background-size: 50px 50px;
+      z-index: -1;
+      pointer-events: none;
+    }
+    
+    .tech-grid::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        radial-gradient(circle at 25% 25%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 75% 25%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 25% 75%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 75% 75%, rgba(42, 200, 255, 0.1) 0%, transparent 25%);
+      z-index: -1;
+    }
+    
+    .data-stream {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    
+    .data-stream::before {
+      content: "";
+      position: absolute;
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(180deg, transparent, rgba(42, 200, 255, 0.3), transparent);
+      animation: streamMove 8s linear infinite;
+      left: 10%;
+    }
+    
+    .data-stream::after {
+      content: "";
+      position: absolute;
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(180deg, transparent, rgba(15, 198, 194, 0.3), transparent);
+      animation: streamMove 8s linear infinite reverse;
+      right: 10%;
+    }
+    
+    @keyframes streamMove {
+      0% { top: 0; }
+      100% { top: 100%; }
+    }
+    
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cpath d='M0 0 L100 0 L100 100 L0 100 Z' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M0 0 L100 100' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M100 0 L0 100' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Ccircle cx='25' cy='25' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='75' cy='25' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='25' cy='75' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='75' cy='75' r='1' fill='%232AC8FF'/%3E%3Crect x='10' y='10' width='20' height='20' fill='none' stroke='%231a4c7d' stroke-width='0.3'/%3E%3Crect x='70' y='70' width='20' height='20' fill='none' stroke='%231a4c7d' stroke-width='0.3'/%3E%3Cpath d='M30 30 L70 70' stroke='%231a4c7d' stroke-width='0.3'/%3E%3Cpath d='M70 30 L30 70' stroke='%231a4c7d' stroke-width='0.3'/%3E%3C/svg%3E");
+      background-size: 100px 100px;
+      opacity: 0.15;
+      z-index: -1;
+      pointer-events: none;
+    }
+    
+    body::after {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 20% 30%, rgba(42, 200, 255, 0.05) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 70%, rgba(15, 198, 194, 0.05) 0%, transparent 50%),
+                  radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.03) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: -1;
+    }
+  </style>
+  </style>
+</head>
+<body class="bg-darkBg text-gray-100 font-sans h-full flex flex-col">
+  <div class="tech-grid"></div>
+  <div class="data-stream"></div>
+  
+  <!-- 顶部导航栏 -->
+  <header class="bg-panelBg py-3 px-6 flex items-center justify-between shadow-lg z-10">
+    <div class="flex items-center space-x-4">
+      <button class="back-button" onclick="window.location.href='index.html'">
+        <i class="fas fa-arrow-left"></i> 返回主界面
+      </button>
+      <h1 class="text-2xl font-bold text-primary">资源一图化展示</h1>
+    </div>
+    <div class="text-gray-400">当前时间：<span id="current-time"></span></div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden">
+    <!-- 左侧功能面板 -->
+    <aside class="w-80 bg-panelBg p-4 shadow-lg scrollbar-thin overflow-y-auto z-10">
+      <h2 class="text-xl font-semibold mb-4 text-primary border-b border-primary/30 pb-2">功能列表</h2>
+      <div class="space-y-3">
+        <!-- 警力显示（9个） -->
+        <div class="flex items-center justify-between p-2 bg-darkBg/50 rounded hover:bg-darkBg/20 transition">
+          <label class="flex items-center">
+            <input type="checkbox" class="mr-2" id="police-force" checked>
+            <i class="fas fa-user-shield mr-2 text-primary"></i>警力显示
+          </label>
+          <span class="text-xs bg-primary/20 px-2 py-0.5 rounded" id="police-force-count">9</span>
+        </div>
+        <!-- 警员管理（23个） -->
+        <div class="flex items-center justify-between p-2 bg-darkBg/50 rounded hover:bg-darkBg/20 transition">
+          <label class="flex items-center">
+            <input type="checkbox" class="mr-2" id="police-officer" checked>
+            <i class="fas fa-user-friends mr-2 text-primary"></i>警员管理
+          </label>
+          <span class="text-xs bg-primary/20 px-2 py-0.5 rounded" id="police-officer-count">23</span>
+        </div>
+        <!-- 警车管理（14个） -->
+        <div class="flex items-center justify-between p-2 bg-darkBg/50 rounded hover:bg-darkBg/20 transition">
+          <label class="flex items-center">
+            <input type="checkbox" class="mr-2" id="police-car" checked>
+            <i class="fas fa-car mr-2 text-primary"></i>警车管理
+          </label>
+          <span class="text-xs bg-primary/20 px-2 py-0.5 rounded" id="police-car-count">14</span>
+        </div>
+        <!-- 警情显示（6个） -->
+        <div class="flex items-center justify-between p-2 bg-darkBg/50 rounded hover:bg-darkBg/20 transition">
+          <label class="flex items-center">
+            <input type="checkbox" class="mr-2" id="police-alert" checked>
+            <i class="fas fa-exclamation-triangle mr-2 text-warning"></i>警情显示
+          </label>
+          <span class="text-xs bg-warning/20 px-2 py-0.5 rounded" id="police-alert-count">6</span>
+        </div>
+        <!-- 视频显示（45个） -->
+        <div class="flex items-center justify-between p-2 bg-darkBg/50 rounded hover:bg-darkBg/20 transition">
+          <label class="flex items-center">
+            <input type="checkbox" class="mr-2" id="video" checked>
+            <i class="fas fa-video mr-2 text-primary"></i>视频显示
+          </label>
+          <span class="text-xs bg-primary/20 px-2 py-0.5 rounded" id="video-count">45</span>
+        </div>
+        <!-- 信号控制显示（27个） -->
+        <div class="flex items-center justify-between p-2 bg-darkBg/50 rounded hover:bg-darkBg/20 transition">
+          <label class="flex items-center">
+            <input type="checkbox" class="mr-2" id="signal-control" checked>
+            <i class="fas fa-traffic-light mr-2 text-primary"></i>信号控制显示
+          </label>
+          <span class="text-xs bg-primary/20 px-2 py-0.5 rounded" id="signal-control-count">27</span>
+        </div>
+        <!-- 红绿灯显示（56个） -->
+        <div class="flex items-center justify-between p-2 bg-darkBg/50 rounded hover:bg-darkBg/20 transition">
+          <label class="flex items-center">
+            <input type="checkbox" class="mr-2" id="traffic-light" checked>
+            <i class="fas fa-lightbulb mr-2 text-primary"></i>红绿灯显示
+          </label>
+          <span class="text-xs bg-primary/20 px-2 py-0.5 rounded" id="traffic-light-count">56</span>
+        </div>
+        <!-- 电子警察显示（68个） -->
+        <div class="flex items-center justify-between p-2 bg-darkBg/50 rounded hover:bg-darkBg/20 transition">
+          <label class="flex items-center">
+            <input type="checkbox" class="mr-2" id="electronic-police" checked>
+            <i class="fas fa-camera mr-2 text-primary"></i>电子警察显示
+          </label>
+          <span class="text-xs bg-primary/20 px-2 py-0.5 rounded" id="electronic-police-count">68</span>
+        </div>
+        <!-- 车牌识别点显示（45个） -->
+        <div class="flex items-center justify-between p-2 bg-darkBg/50 rounded hover:bg-darkBg/20 transition">
+          <label class="flex items-center">
+            <input type="checkbox" class="mr-2" id="plate-recognition" checked>
+            <i class="fas fa-id-card mr-2 text-primary"></i>车牌识别点显示
+          </label>
+          <span class="text-xs bg-primary/20 px-2 py-0.5 rounded" id="plate-recognition-count">45</span>
+        </div>
+        <!-- 综合路况管理（18个） -->
+        <div class="flex items-center justify-between p-2 bg-darkBg/50 rounded hover:bg-darkBg/20 transition">
+          <label class="flex items-center">
+            <input type="checkbox" class="mr-2" id="traffic-management" checked>
+            <i class="fas fa-road mr-2 text-primary"></i>综合路况管理
+          </label>
+          <span class="text-xs bg-primary/20 px-2 py-0.5 rounded" id="traffic-management-count">18</span>
+        </div>
+        <!-- 其他设施设备显示（32个） -->
+        <div class="flex items-center justify-between p-2 bg-darkBg/50 rounded hover:bg-darkBg/20 transition">
+          <label class="flex items-center">
+            <input type="checkbox" class="mr-2" id="other-facilities" checked>
+            <i class="fas fa-tools mr-2 text-primary"></i>其他设施设备显示
+          </label>
+          <span class="text-xs bg-primary/20 px-2 py-0.5 rounded" id="other-facilities-count">32</span>
+        </div>
+      </div>
+      
+      <div class="mt-6 pt-4 border-t border-primary/30">
+        <button id="zoom-to-nanchang" class="w-full bg-primary hover:bg-primary/80 text-white py-2 px-4 rounded transition flex items-center justify-center">
+          <i class="fas fa-map-marker-alt mr-2"></i>定位到南昌市全域
+        </button>
+      </div>
+    </aside>
+
+    <!-- 中间地图容器 - 确保地图正常显示 -->
+    <main class="flex-1 overflow-hidden relative">
+      <div id="map" class="w-full h-full absolute top-0 left-0"></div>
+    </main>
+
+    <!-- 右侧信息面板 -->
+    <aside class="w-80 bg-panelBg p-4 shadow-lg scrollbar-thin overflow-y-auto z-10">
+      <h2 class="text-xl font-semibold mb-4 text-primary border-b border-primary/30 pb-2">统计信息</h2>
+      
+      <!-- 资源分布统计图表 -->
+      <div class="mb-6">
+        <h3 class="text-lg font-medium mb-2 text-primary flex items-center">
+          <i class="fas fa-chart-pie mr-2"></i>资源分布统计
+        </h3>
+        <div class="bg-darkBg/50 rounded p-2 h-64">
+          <canvas id="resource-chart"></canvas>
+        </div>
+      </div>
+      
+      <!-- 区域路况概览 -->
+      <div class="mb-6">
+        <h3 class="text-lg font-medium mb-2 text-primary flex items-center">
+          <i class="fas fa-map mr-2"></i>区域路况概览
+        </h3>
+        <div class="space-y-2 bg-darkBg/50 rounded p-3">
+          <div class="flex justify-between items-center">
+            <span>中心城区</span>
+            <span class="text-warning px-2 py-1 rounded text-xs">基本畅通</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span>红谷滩区</span>
+            <span class="text-secondary px-2 py-1 rounded text-xs">畅通</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span>新建区</span>
+            <span class="text-secondary px-2 py-1 rounded text-xs">畅通</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span>经开区</span>
+            <span class="text-warning px-2 py-1 rounded text-xs">基本畅通</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span>高新区(含瑶湖)</span>
+            <span class="text-secondary px-2 py-1 rounded text-xs">畅通</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 主要道路状况 -->
+      <div>
+        <h3 class="text-lg font-medium mb-2 text-primary flex items-center">
+          <i class="fas fa-road mr-2"></i>主要道路状况
+        </h3>
+        <div class="space-y-3 bg-darkBg/50 rounded p-3">
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span>八一大道</span>
+              <span class="text-secondary">畅通</span>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-2">
+              <div class="bg-secondary h-2 rounded-full" style="width: 20%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span>阳明路</span>
+              <span class="text-warning">缓行</span>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-2">
+              <div class="bg-warning h-2 rounded-full" style="width: 60%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span>紫阳大道(瑶湖段)</span>
+              <span class="text-secondary">畅通</span>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-2">
+              <div class="bg-secondary h-2 rounded-full" style="width: 15%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span>丰和大道</span>
+              <span class="text-secondary">畅通</span>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-2">
+              <div class="bg-secondary h-2 rounded-full" style="width: 30%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-sm mb-1">
+              <span>昌东大道</span>
+              <span class="text-warning">基本畅通</span>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-2">
+              <div class="bg-warning h-2 rounded-full" style="width: 40%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    // 初始化地图（确保地图正常显示）
+    const map = L.map('map').setView([28.6823, 115.9096], 11);
+    
+    // 添加高德地图瓦片层（适配国内定位）
+    L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+      subdomains: ['1', '2', '3', '4'],
+      attribution: '© 高德地图',
+      maxZoom: 18,
+      minZoom: 5
+    }).addTo(map);
+
+    // 资源类型样式定义（颜色、图标、弹窗名称）
+    const resourceStyles = {
+      'police-force': { color: '#3B82F6', icon: 'user-shield', popup: '警力点' },
+      'police-officer': { color: '#60A5FA', icon: 'user', popup: '警员' },
+      'police-car': { color: '#EF4444', icon: 'car', popup: '警车' },
+      'police-alert': { color: '#F59E0B', icon: 'exclamation-triangle', popup: '警情' },
+      'video': { color: '#8B5CF6', icon: 'video', popup: '监控视频' },
+      'signal-control': { color: '#10B981', icon: 'traffic-light', popup: '信号控制' },
+      'traffic-light': { color: '#34D399', icon: 'lightbulb', popup: '红绿灯' },
+      'electronic-police': { color: '#EC4899', icon: 'camera', popup: '电子警察' },
+      'plate-recognition': { color: '#F97316', icon: 'id-card', popup: '车牌识别点' },
+      'traffic-management': { color: '#06B6D4', icon: 'road', popup: '路况监测' },
+      'other-facilities': { color: '#64748B', icon: 'tools', popup: '其他设施' }
+    };
+
+    // 生成指定数量的随机点（确保与左侧统计数量一致）
+    function generatePoints(baseLat, baseLng, count, type, namePrefix) {
+      const points = [];
+      for (let i = 1; i <= count; i++) {
+        // 在基础坐标附近生成随机偏移，确保点分布合理
+        const latOffset = (Math.random() - 0.5) * 0.15;
+        const lngOffset = (Math.random() - 0.5) * 0.2;
+        const lat = baseLat + latOffset;
+        const lng = baseLng + lngOffset;
+        points.push([lat, lng, `${namePrefix}${i}`]);
+      }
+      return points;
+    }
+
+    // 资源点数据（与左侧统计数量完全匹配）
+    const resourcePoints = {
+      'police-force': generatePoints(28.6823, 115.8896, 9, 'police-force', '警力点'),
+      'police-officer': generatePoints(28.6823, 115.8896, 23, 'police-officer', '警员'),
+      'police-car': generatePoints(28.6823, 115.8896, 14, 'police-car', '警车'),
+      'police-alert': generatePoints(28.6823, 115.8896, 6, 'police-alert', '警情'),
+      'video': generatePoints(28.6823, 115.8896, 45, 'video', '监控视频'),
+      'signal-control': generatePoints(28.6823, 115.8896, 27, 'signal-control', '信号控制'),
+      'traffic-light': generatePoints(28.6823, 115.8896, 56, 'traffic-light', '红绿灯'),
+      'electronic-police': generatePoints(28.6823, 115.8896, 68, 'electronic-police', '电子警察'),
+      'plate-recognition': generatePoints(28.6823, 115.8896, 45, 'plate-recognition', '车牌识别点'),
+      'traffic-management': generatePoints(28.6823, 115.8896, 18, 'traffic-management', '路况监测点'),
+      'other-facilities': generatePoints(28.6823, 115.8896, 32, 'other-facilities', '其他设施')
+    };
+
+    // 在地图上添加所有标记
+    const resourceMarkers = {};
+    
+    Object.keys(resourcePoints).forEach(resourceType => {
+      const style = resourceStyles[resourceType];
+      resourceMarkers[resourceType] = resourcePoints[resourceType].map(([lat, lng, name]) => {
+        // 创建自定义图标
+        const icon = L.divIcon({
+          html: `<div class="custom-marker"><i class="fas fa-${style.icon}" style="color: ${style.color};"></i></div>`,
+          className: '',
+          iconSize: [24, 24]
+        });
+        
+        // 创建标记并添加到地图
+        return L.marker([lat, lng], { icon })
+          .bindPopup(`<b>${name}</b><br>位置: ${lat.toFixed(6)}, ${lng.toFixed(6)}`)
+          .addTo(map);
+      });
+    });
+
+    // 功能开关交互：控制各类标记的显示/隐藏
+    Object.keys(resourceMarkers).forEach(resourceType => {
+      const checkbox = document.getElementById(resourceType);
+      if (checkbox) {
+        checkbox.addEventListener('change', (e) => {
+          resourceMarkers[resourceType].forEach(marker => {
+            if (e.target.checked) {
+              marker.addTo(map);
+            } else {
+              map.removeLayer(marker);
+            }
+          });
+        });
+      }
+    });
+
+    // 定位到南昌市全域按钮
+    document.getElementById('zoom-to-nanchang').addEventListener('click', () => {
+      map.flyTo([28.6823, 115.9096], 11);
+    });
+
+    // 实时时间显示
+    function updateTime() {
+      const now = new Date();
+      const timeStr = now.toLocaleString();
+      document.getElementById('current-time').textContent = timeStr;
+    }
+    updateTime();
+    setInterval(updateTime, 1000);
+
+    // 初始化资源分布统计图表
+    window.addEventListener('load', () => {
+      const ctx = document.getElementById('resource-chart').getContext('2d');
+      
+      // 准备图表数据
+      const labels = Object.keys(resourcePoints).map(key => {
+        return resourceStyles[key].popup;
+      });
+      
+      const data = Object.keys(resourcePoints).map(key => {
+        return resourcePoints[key].length;
+      });
+      
+      const backgroundColors = Object.keys(resourcePoints).map(key => {
+        return resourceStyles[key].color + '80'; // 添加透明度
+      });
+      
+      new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: backgroundColors,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: {
+                color: '#e2e8f0',
+                font: {
+                  size: 10
+                }
+              }
+            }
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智慧交通综合管理系统</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#0A2B4F',
+            secondary: '#1E5A9E',
+            accent: '#0FC6C2',
+            warning: '#FF7D00',
+            danger: '#F53F3F',
+            success: '#00B42A',
+          },
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Microsoft YaHei", sans-serif;
+    }
+    body {
+      background: #051022;
+      color: #e0f2ff;
+      overflow-x: hidden;
+      position: relative;
+    }
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cpath d='M0 0 L100 0 L100 100 L0 100 Z' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M0 0 L100 0 L100 100 L0 100 Z' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M0 0 L100 100' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M100 0 L0 100' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Ccircle cx='25' cy='25' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='75' cy='25' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='25' cy='75' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='75' cy='75' r='1' fill='%232AC8FF'/%3E%3C/svg%3E");
+      background-size: 100px 100px;
+      opacity: 0.15;
+      z-index: -1;
+    }
+    
+    body::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        linear-gradient(0deg, transparent 49%, rgba(42, 200, 255, 0.03) 50%, transparent 51%),
+        linear-gradient(90deg, transparent 49%, rgba(15, 198, 194, 0.03) 50%, transparent 51%),
+        radial-gradient(circle at 20% 30%, rgba(42, 200, 255, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(15, 198, 194, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(30, 90, 158, 0.03) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: -1;
+    }
+    
+    .tech-grid {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(rgba(42, 200, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(42, 200, 255, 0.05) 1px, transparent 1px);
+      background-size: 50px 50px;
+      z-index: -1;
+      pointer-events: none;
+    }
+    
+    .tech-grid::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        radial-gradient(circle at 25% 25%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 75% 25%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 25% 75%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 75% 75%, rgba(42, 200, 255, 0.1) 0%, transparent 25%);
+      z-index: -1;
+    }
+    
+    .data-stream {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    
+    .data-stream::before {
+      content: "";
+      position: absolute;
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(180deg, transparent, rgba(42, 200, 255, 0.3), transparent);
+      animation: streamMove 8s linear infinite;
+      left: 10%;
+    }
+    
+    .data-stream::after {
+      content: "";
+      position: absolute;
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(180deg, transparent, rgba(15, 198, 194, 0.3), transparent);
+      animation: streamMove 8s linear infinite reverse;
+      right: 10%;
+    }
+    
+    @keyframes streamMove {
+      0% { top: 0; }
+      100% { top: 100%; }
+    }
+    
+    .card {
+      background: linear-gradient(145deg, #0d2540, #15355a);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+      border: 1px solid #1a4c7d;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, #2AC8FF, #66CCFF, #2AC8FF);
+      animation: glow 3s linear infinite;
+      background-size: 200% auto;
+    }
+    @keyframes glow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 0 20px rgba(42, 200, 255, 0.3);
+    }
+    .card-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      border-bottom:1px solid #1f4b7c;
+      display: flex;
+      align-items: center;
+    }
+    .card-title i {
+      margin-right: 10px;
+      color: #2AC8FF;
+      text-shadow: 0 0 8px rgba(42, 200, 255, 0.6);
+    }
+    .chart-container {
+      width: 100%;
+      height: 200px;
+    }
+    .system-card {
+      background: linear-gradient(145deg, #0d2540, #15355a);
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+      border: 1px solid #1a4c7d;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .system-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, #2AC8FF, #66CCFF, #2AC8FF);
+      animation: glow 3s linear infinite;
+      background-size: 200% auto;
+    }
+    
+    .system-card-full {
+      background: linear-gradient(145deg, #0d2540, #15355a);
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+      border: 1px solid #1a4c7d;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 24px;
+      width: 100%;
+      display: block;
+      text-align: center;
+    }
+    
+    .system-card-full::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, #2AC8FF, #66CCFF, #2AC8FF);
+      animation: glow 3s linear infinite;
+      background-size: 200% auto;
+    }
+    
+    .system-card-full:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 30px rgba(42, 200, 255, 0.3);
+      border-color: #2AC8FF;
+    }
+    
+    .system-card-full .icon {
+      font-size: 48px !important;
+      color: #2AC8FF !important;
+      margin-bottom: 20px !important;
+      text-shadow: 0 0 15px rgba(42, 200, 255, 0.6);
+    }
+    
+    .system-card-full .title {
+      font-size: 28px !important;
+      font-weight: bold !important;
+      color: #e0f2ff !important;
+      margin-bottom: 15px !important;
+    }
+    
+    .system-card-full .description {
+      font-size: 16px !important;
+      color: #94a3b8 !important;
+      line-height: 1.8 !important;
+    }
+    
+    .system-card-full:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 0 30px rgba(42, 200, 255, 0.5);
+      border-color: #2AC8FF;
+    }
+    
+    .system-card .icon {
+      font-size: 48px;
+      color: #2AC8FF;
+      margin-bottom: 15px;
+      text-shadow: 0 0 15px rgba(42, 200, 255, 0.6);
+    }
+    .system-card .title {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .system-card .description {
+      font-size: 14px;
+      color: #99CCFF;
+      line-height: 1.6;
+    }
+    .stat-card {
+      background: rgba(31, 75, 124, 0.3);
+      border: 1px solid #1f4b7c;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      transition: all 0.3s;
+    }
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 0 15px rgba(42, 200, 255, 0.3);
+    }
+    .stat-card .icon {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+    .stat-card .value {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .stat-card .label {
+      font-size: 14px;
+      color: #99CCFF;
+    }
+    
+    .stat-card:active {
+      transform: scale(0.95);
+    }
+    
+    .system-card:active {
+      transform: translateY(-5px) scale(0.98);
+    }
+    
+    .system-card:focus-visible {
+      outline: 2px solid #2AC8FF;
+      outline-offset: 2px;
+    }
+    
+    .card:active {
+      transform: translateY(-2px);
+    }
+    
+    button, a {
+      outline: none;
+    }
+    
+    button:focus-visible, a:focus-visible {
+      outline: 2px solid #2AC8FF;
+      outline-offset: 2px;
+    }
+    
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .toast {
+      min-width: 300px;
+      padding: 16px 20px;
+      border-radius: 8px;
+      background: linear-gradient(145deg, #0d2540, #15355a);
+      border: 1px solid #1a4c7d;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: slideIn 0.3s ease-out;
+      transition: all 0.3s;
+    }
+    
+    .toast.success {
+      border-left: 4px solid #00B42A;
+    }
+    
+    .toast.error {
+      border-left: 4px solid #F53F3F;
+    }
+    
+    .toast.warning {
+      border-left: 4px solid #FF7D00;
+    }
+    
+    .toast.info {
+      border-left: 4px solid #2AC8FF;
+    }
+    
+    .toast-icon {
+      font-size: 20px;
+    }
+    
+    .toast.success .toast-icon {
+      color: #00B42A;
+    }
+    
+    .toast.error .toast-icon {
+      color: #F53F3F;
+    }
+    
+    .toast.warning .toast-icon {
+      color: #FF7D00;
+    }
+    
+    .toast.info .toast-icon {
+      color: #2AC8FF;
+    }
+    
+    .toast-content {
+      flex: 1;
+    }
+    
+    .toast-title {
+      font-weight: bold;
+      margin-bottom: 4px;
+      color: #e0f2ff;
+    }
+    
+    .toast-message {
+      font-size: 14px;
+      color: #99CCFF;
+    }
+    
+    .toast-close {
+      cursor: pointer;
+      color: #99CCFF;
+      transition: all 0.2s;
+    }
+    
+    .toast-close:hover {
+      color: #e0f2ff;
+    }
+    
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes slideOut {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+    }
+    
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(5, 16, 34, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9998;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s;
+    }
+    
+    .loading-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .loading-spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid rgba(42, 200, 255, 0.2);
+      border-top-color: #2AC8FF;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(42, 200, 255, 0.3);
+      transform: scale(0);
+      animation: ripple 0.6s linear;
+      pointer-events: none;
+    }
+    
+    @keyframes ripple {
+      to {
+        transform: scale(4);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="tech-grid"></div>
+  <div class="data-stream"></div>
+  
+  <div class="toast-container" id="toast-container"></div>
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-spinner"></div>
+  </div>
+  
+  <div class="min-h-screen p-6">
+    <div class="max-w-7xl mx-auto">
+      <header class="text-center mb-12 relative">
+        <div class="absolute top-0 right-0 flex items-center gap-4">
+          <div class="flex items-center gap-2 text-sm">
+            <i class="fa fa-user-circle text-accent text-xl"></i>
+            <span class="text-gray-300" id="user-display">管理员</span>
+          </div>
+          <button onclick="logout()" class="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-300 flex items-center gap-2 text-sm">
+            <i class="fa fa-sign-out"></i>
+            <span>退出登录</span>
+          </button>
+        </div>
+        <h1 class="text-4xl font-bold text-accent mb-4">
+          <i class="fa fa-road mr-3"></i>智慧交通综合管理系统
+        </h1>
+        <p class="text-gray-400">Intelligent Transportation Management System</p>
+        <div class="mt-4 text-sm text-gray-400">
+          <i class="fa fa-clock-o mr-2"></i>当前时间：<span id="current-time"></span>
+        </div>
+      </header>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+        <div class="stat-card">
+          <i class="fa fa-car text-accent icon"></i>
+          <div class="value text-accent">3,256</div>
+          <div class="label">监管车辆总数</div>
+        </div>
+        <div class="stat-card">
+          <i class="fa fa-building text-success icon"></i>
+          <div class="value text-success">85</div>
+          <div class="label">重点监管企业</div>
+        </div>
+        <div class="stat-card">
+          <i class="fa fa-exclamation-triangle text-warning icon"></i>
+          <div class="value text-warning">127</div>
+          <div class="label">今日预警总数</div>
+        </div>
+        <div class="stat-card">
+          <i class="fa fa-check-circle text-success icon"></i>
+          <div class="value text-success">98.5%</div>
+          <div class="label">系统运行状态</div>
+        </div>
+        <div class="stat-card">
+          <i class="fa fa-tasks text-accent icon"></i>
+          <div class="value text-accent">156</div>
+          <div class="label">今日处理事件</div>
+        </div>
+        <div class="stat-card">
+          <i class="fa fa-users text-success icon"></i>
+          <div class="value text-success">328</div>
+          <div class="label">警力在线人数</div>
+        </div>
+      </div>
+      
+      <div class="mb-8">
+        <h2 class="text-2xl font-bold text-accent mb-6 text-center">
+          <i class="fa fa-th-large mr-2"></i>子系统导航
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <a href="分析决策子系统.html" class="system-card">
+            <i class="fa fa-lightbulb-o icon"></i>
+            <div class="title">分析决策</div>
+            <div class="description">综合分析、趋势预测、风险评估、决策支持、智能推荐。基于大数据和AI算法，为交通管理提供科学决策依据</div>
+          </a>
+          
+          <a href="道路监管子系统.html" class="system-card">
+            <i class="fa fa-road icon"></i>
+            <div class="title">道路监管子系统</div>
+            <div class="description">道路基础设施、违法监管、事故监管、拥堵监管、黑点检测、危险道路评估</div>
+          </a>
+          
+          <a href="环境监测子系统.html" class="system-card">
+            <i class="fa fa-cloud icon"></i>
+            <div class="title">环境监测子系统</div>
+            <div class="description">环境KPI、GIS叠加、预警列表、气象监测、能见度监测</div>
+          </a>
+          
+          <a href="重点企业监管.html" class="system-card">
+            <i class="fa fa-building icon"></i>
+            <div class="title">重点企业监管</div>
+            <div class="description">企业信息管理、实时预警、研判分析、告知管理</div>
+          </a>
+          
+          <a href="重点车辆监管子系统.html" class="system-card">
+            <i class="fa fa-truck icon"></i>
+            <div class="title">重点车辆监管</div>
+            <div class="description">轨迹接入、事故违法预警、异常行为预警、积分管控、轨迹规律挖掘</div>
+          </a>
+          
+          <a href="突发事件处理子系统.html" class="system-card">
+            <i class="fa fa-exclamation-triangle icon"></i>
+            <div class="title">突发事件处理</div>
+            <div class="description">实时监督、舆情汇集、事件处置、应急响应</div>
+          </a>
+          
+          <a href="资源一图化智能展示..html" class="system-card">
+            <i class="fa fa-map icon"></i>
+            <div class="title">资源一图化展示</div>
+            <div class="description">警力、警员、警车、视频、信号控制、红绿灯、电子警察等资源展示</div>
+          </a>
+          
+          <a href="情报处置子系统.html" class="system-card">
+            <i class="fa fa-shield icon"></i>
+            <div class="title">情报处置子系统</div>
+            <div class="description">情报统计总览、突发事件受理与核实、实时信息交互与情报推送、基于预案指挥调度、应急处置、事件跟踪</div>
+          </a>
+          
+          <a href="分析研判子系统.html" class="system-card">
+            <i class="fa fa-line-chart icon"></i>
+            <div class="title">分析研判子系统</div>
+            <div class="description">应急处置、事件跟踪、数据分析、研判报告</div>
+          </a>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="card">
+          <div class="card-title"><i class="fa fa-chart-line"></i>今日数据概览</div>
+          <div class="space-y-4">
+            <div class="flex justify-between items-center">
+              <span class="text-gray-300">事件总数</span>
+              <span class="text-accent font-bold">156</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-300">已处理</span>
+              <span class="text-success font-bold">133</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-300">处理中</span>
+              <span class="text-warning font-bold">23</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-300">处理率</span>
+              <span class="text-success font-bold">85.3%</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-title"><i class="fa fa-exclamation-circle"></i>预警统计</div>
+          <div class="space-y-4">
+            <div class="flex justify-between items-center">
+              <span class="text-gray-300">红色预警</span>
+              <span class="text-danger font-bold">8</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-300">橙色预警</span>
+              <span class="text-warning font-bold">15</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-300">黄色预警</span>
+              <span class="text-accent font-bold">38</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-300">蓝色预警</span>
+              <span class="text-success font-bold">66</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-title"><i class="fa fa-newspaper-o"></i>舆情概况</div>
+          <div class="space-y-4">
+            <div class="flex justify-between items-center">
+              <span class="text-gray-300">舆情总数</span>
+              <span class="text-accent font-bold">2,479</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-300">正面舆情</span>
+              <span class="text-success font-bold">789</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-300">中性舆情</span>
+              <span class="text-accent font-bold">1,234</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-300">负面舆情</span>
+              <span class="text-danger font-bold">456</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <div class="card">
+          <div class="card-title"><i class="fa fa-pie-chart"></i>事件类型分布</div>
+          <div class="chart-container" id="event-type-chart"></div>
+        </div>
+        
+        <div class="card">
+          <div class="card-title"><i class="fa fa-line-chart"></i>24小时事件趋势</div>
+          <div class="chart-container" id="event-trend-chart"></div>
+        </div>
+      </div>
+      
+      <footer class="text-center mt-12 text-gray-400 text-sm">
+        <p>© 2025 智慧交通综合管理系统 | Intelligent Transportation Management System</p>
+      </footer>
+    </div>
+  </div>
+  
+  <script>
+    function updateTime() {
+      const now = new Date();
+      const timeStr = now.toLocaleString('zh-CN');
+      document.getElementById('current-time').textContent = timeStr;
+    }
+    
+    function logout() {
+      showToast('info', '退出登录', '正在退出系统...', 1500);
+      setTimeout(() => {
+        window.location.href = 'login.html';
+      }, 1000);
+    }
+    
+    function showToast(type, title, message, duration = 3000) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      
+      const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-times-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+      };
+      
+      toast.innerHTML = `
+        <i class="fa ${icons[type]} toast-icon"></i>
+        <div class="toast-content">
+          <div class="toast-title">${title}</div>
+          <div class="toast-message">${message}</div>
+        </div>
+        <i class="fa fa-times toast-close"></i>
+      `;
+      
+      container.appendChild(toast);
+      
+      const closeBtn = toast.querySelector('.toast-close');
+      closeBtn.addEventListener('click', () => {
+        removeToast(toast);
+      });
+      
+      if (duration > 0) {
+        setTimeout(() => {
+          removeToast(toast);
+        }, duration);
+      }
+      
+      return toast;
+    }
+    
+    function removeToast(toast) {
+      toast.style.animation = 'slideOut 0.3s ease-out';
+      setTimeout(() => {
+        if (toast.parentElement) {
+          toast.parentElement.removeChild(toast);
+        }
+      }, 300);
+    }
+    
+    function showLoading() {
+      document.getElementById('loading-overlay').classList.add('active');
+    }
+    
+    function hideLoading() {
+      document.getElementById('loading-overlay').classList.remove('active');
+    }
+    
+    function createRipple(event) {
+      const button = event.currentTarget;
+      const circle = document.createElement('span');
+      const diameter = Math.max(button.clientWidth, button.clientHeight);
+      const radius = diameter / 2;
+      
+      circle.style.width = circle.style.height = `${diameter}px`;
+      circle.style.left = `${event.clientX - button.getBoundingClientRect().left - radius}px`;
+      circle.style.top = `${event.clientY - button.getBoundingClientRect().top - radius}px`;
+      circle.classList.add('ripple');
+      
+      const ripple = button.getElementsByClassName('ripple')[0];
+      if (ripple) {
+        ripple.remove();
+      }
+      
+      button.appendChild(circle);
+    }
+    
+    function addRippleEffect() {
+      const buttons = document.querySelectorAll('.system-card, .stat-card');
+      buttons.forEach(button => {
+        button.addEventListener('click', createRipple);
+      });
+    }
+    
+    function initEventTypeChart() {
+      const chart = echarts.init(document.getElementById('event-type-chart'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'item' },
+        series: [{
+          type: 'pie',
+          radius: ['40%', '70%'],
+          data: [
+            { value: 56, name: '交通事故' },
+            { value: 42, name: '设施故障' },
+            { value: 28, name: '道路积水' },
+            { value: 18, name: '大雾天气' },
+            { value: 12, name: '其他' }
+          ],
+          label: {
+            show: true,
+            color: '#e0f2ff',
+            formatter: '{b}: {c}起'
+          },
+          itemStyle: {
+            borderRadius: 8,
+            borderColor: '#1F4B7C',
+            borderWidth: 1,
+            shadowBlur: 15,
+            shadowColor: 'rgba(42, 200, 255, 0.4)'
+          },
+          color: ['#2AC8FF', '#66CCFF', '#99DDFF', '#CCEDFF', '#00B42A'],
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 25,
+              shadowColor: 'rgba(42, 200, 255, 0.8)',
+              scale: 1.1
+            }
+          }
+        }]
+      });
+    }
+    
+    function initEventTrendChart() {
+      const chart = echarts.init(document.getElementById('event-trend-chart'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis' },
+        xAxis: {
+          type: 'category',
+          data: ['0:00', '4:00', '8:00', '12:00', '16:00', '20:00', '24:00'],
+          axisLabel: { color: '#e0f2ff' },
+          axisLine: { lineStyle: { color: '#1F4B7C' } }
+        },
+        yAxis: {
+          type: 'value',
+          axisLabel: { color: '#e0f2ff' },
+          splitLine: { lineStyle: { color: '#1F4B7C' } }
+        },
+        series: [{
+          type: 'line',
+          data: [12, 8, 45, 38, 52, 35, 18],
+          lineStyle: { color: '#2AC8FF', width: 3 },
+          itemStyle: { color: '#2AC8FF' },
+          areaStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: 'rgba(42, 200, 255, 0.3)' },
+              { offset: 1, color: 'rgba(42, 200, 255, 0.05)' }
+            ])
+          }
+        }]
+      });
+    }
+    
+    function setupSystemCardInteractions() {
+      const systemCards = document.querySelectorAll('.system-card');
+      systemCards.forEach(card => {
+        card.addEventListener('click', function(e) {
+          const title = this.querySelector('.title').textContent;
+          showLoading();
+          setTimeout(() => {
+            hideLoading();
+            showToast('info', '正在跳转', `正在进入${title}...`, 1500);
+          }, 500);
+        });
+      });
+    }
+    
+    function setupStatCardInteractions() {
+      const statCards = document.querySelectorAll('.stat-card');
+      statCards.forEach(card => {
+        card.addEventListener('click', function() {
+          const label = this.querySelector('.label').textContent;
+          const value = this.querySelector('.value').textContent;
+          showToast('info', label, `当前${label}为：${value}`);
+        });
+      });
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      updateTime();
+      setInterval(updateTime, 1000);
+      initEventTypeChart();
+      initEventTrendChart();
+      addRippleEffect();
+      setupSystemCardInteractions();
+      setupStatCardInteractions();
+      
+      window.addEventListener('resize', () => {
+        const charts = document.querySelectorAll('.chart-container');
+        charts.forEach(container => {
+          const chart = echarts.getInstanceByDom(container);
+          if (chart) chart.resize();
+        });
+      });
+      
+      showToast('success', '系统加载完成', '欢迎使用智慧交通综合管理系统', 2000);
+    });
+  </script>
+</body>
+</html>

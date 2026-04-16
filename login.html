@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 - 智慧交通综合管理系统</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#0A2B4F',
+            secondary: '#1E5A9E',
+            accent: '#0FC6C2',
+            warning: '#FF7D00',
+            danger: '#F53F3F',
+            success: '#00B42A',
+          },
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Microsoft YaHei", sans-serif;
+    }
+    
+    body {
+      background: #051022;
+      color: #e0f2ff;
+      overflow-x: hidden;
+      min-height: 100vh;
+      position: relative;
+    }
+    
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cpath d='M0 0 L100 0 L100 100 L0 100 Z' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M0 0 L100 0 L100 100 L0 100 Z' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M0 0 L100 100' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M100 0 L0 100' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Ccircle cx='25' cy='25' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='75' cy='25' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='25' cy='75' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='75' cy='75' r='1' fill='%232AC8FF'/%3E%3C/svg%3E");
+      background-size: 100px 100px;
+      opacity: 0.15;
+      z-index: -1;
+    }
+    
+    body::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        linear-gradient(0deg, transparent 49%, rgba(42, 200, 255, 0.03) 50%, transparent 51%),
+        linear-gradient(90deg, transparent 49%, rgba(15, 198, 194, 0.03) 50%, transparent 51%),
+        radial-gradient(circle at 20% 30%, rgba(42, 200, 255, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(15, 198, 194, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(30, 90, 158, 0.03) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: -1;
+    }
+    
+    .tech-grid {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(rgba(42, 200, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(42, 200, 255, 0.05) 1px, transparent 1px);
+      background-size: 50px 50px;
+      z-index: -1;
+      pointer-events: none;
+    }
+    
+    .tech-grid::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        radial-gradient(circle at 25% 25%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 75% 25%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 25% 75%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 75% 75%, rgba(42, 200, 255, 0.1) 0%, transparent 25%);
+      z-index: -1;
+    }
+    
+    .data-stream {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    
+    .data-stream::before {
+      content: "";
+      position: absolute;
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(180deg, transparent, rgba(42, 200, 255, 0.3), transparent);
+      animation: streamMove 8s linear infinite;
+      left: 10%;
+    }
+    
+    .data-stream::after {
+      content: "";
+      position: absolute;
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(180deg, transparent, rgba(15, 198, 194, 0.3), transparent);
+      animation: streamMove 8s linear infinite reverse;
+      right: 10%;
+    }
+    
+    @keyframes streamMove {
+      0% { top: 0; }
+      100% { top: 100%; }
+    }
+    
+    .main-container {
+      min-height: 100vh;
+      display: flex;
+      position: relative;
+    }
+    
+    .left-section {
+      flex: 1.5;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .system-title {
+      font-size: 32px;
+      font-weight: bold;
+      color: #2AC8FF;
+      margin-bottom: 40px;
+      text-align: center;
+      letter-spacing: 1px;
+      text-shadow: 0 0 10px rgba(42, 200, 255, 0.6);
+    }
+    
+    .illustration-container {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .illustration-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 0px;
+      background: linear-gradient(90deg, #2AC8FF, #66CCFF, #2AC8FF);
+      animation: glow 3s linear infinite;
+      background-size: 200% auto;
+    }
+    
+    .illustration-img {
+      width: 100%;
+      height: auto;
+      max-height: 500px;
+      object-fit: contain;
+    }
+    
+    .right-section {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+    }
+    
+    .login-card {
+      background: linear-gradient(145deg, #0d2540, #15355a);
+      border-radius: 12px;
+      padding: 50px 45px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+      border: 1px solid #1a4c7d;
+      width: 100%;
+      max-width: 400px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .login-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, #2AC8FF, #66CCFF, #2AC8FF);
+      animation: glow 3s linear infinite;
+      background-size: 200% auto;
+    }
+    
+    @keyframes glow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    
+    .login-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #2AC8FF;
+      text-align: center;
+      margin-bottom: 30px;
+      letter-spacing: 1px;
+      text-shadow: 0 0 8px rgba(42, 200, 255, 0.6);
+    }
+    
+    .form-group {
+      margin-bottom: 25px;
+      position: relative;
+    }
+    
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    
+    .input-icon {
+      position: absolute;
+      left: 12px;
+      color: #2AC8FF;
+      font-size: 16px;
+      z-index: 1;
+      text-shadow: 0 0 8px rgba(42, 200, 255, 0.6);
+    }
+    
+    .form-group input {
+      width: 100%;
+      padding: 12px 15px 12px 40px;
+      background: rgba(31, 75, 124, 0.3);
+      border: 1px solid #1f4b7c;
+      border-radius: 8px;
+      color: #e0f2ff;
+      font-size: 14px;
+      transition: all 0.3s;
+      outline: none;
+    }
+    
+    .form-group input:focus {
+      border-color: #2AC8FF;
+      box-shadow: 0 0 10px rgba(42, 200, 255, 0.3);
+      background: rgba(31, 75, 124, 0.5);
+    }
+    
+    .form-group input::placeholder {
+      color: #64748b;
+    }
+    
+    .form-group input.error {
+      border-color: #F53F3F;
+      box-shadow: 0 0 10px rgba(245, 63, 63, 0.3);
+    }
+    
+    .form-group input.success {
+      border-color: #00B42A;
+      box-shadow: 0 0 10px rgba(0, 180, 42, 0.3);
+    }
+    
+    .password-toggle {
+      position: absolute;
+      right: 12px;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 16px;
+    }
+    
+    .password-toggle:hover {
+      color: #2AC8FF;
+      text-shadow: 0 0 8px rgba(42, 200, 255, 0.6);
+    }
+    
+    .error-message {
+      display: none;
+      color: #F53F3F;
+      font-size: 12px;
+      margin-top: 5px;
+      animation: shake 0.3s ease-in-out;
+    }
+    
+    .error-message.show {
+      display: block;
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+    
+    .login-button {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #2AC8FF, #66CCFF);
+      border: none;
+      border-radius: 8px;
+      color: #051022;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+      margin-top: 10px;
+      letter-spacing: 2px;
+    }
+    
+    .login-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(42, 200, 255, 0.4);
+    }
+    
+    .login-button:active {
+      transform: translateY(0);
+    }
+    
+    .login-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .login-button i {
+      margin-right: 8px;
+    }
+    
+    .login-button .spinner {
+      display: none;
+      width: 16px;
+      height: 16px;
+      border: 2px solid transparent;
+      border-top-color: #051022;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+    }
+    
+    .login-button.loading .spinner {
+      display: inline-block;
+    }
+    
+    .login-button.loading .button-text {
+      opacity: 0;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .remember-me {
+      display: flex;
+      align-items: center;
+      margin-top: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .remember-me input[type="checkbox"] {
+      width: auto;
+      margin-right: 8px;
+      cursor: pointer;
+    }
+    
+    .remember-me label {
+      font-size: 14px;
+      color: #94a3b8;
+      cursor: pointer;
+      margin: 0;
+    }
+    
+    .footer {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      font-size: 12px;
+      color: #64748b;
+    }
+    
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .toast {
+      min-width: 300px;
+      padding: 16px 20px;
+      border-radius: 8px;
+      background: linear-gradient(145deg, #0d2540, #15355a);
+      border: 1px solid #1a4c7d;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: slideIn 0.3s ease-out;
+      transition: all 0.3s;
+    }
+    
+    .toast.success {
+      border-left: 4px solid #00B42A;
+    }
+    
+    .toast.error {
+      border-left: 4px solid #F53F3F;
+    }
+    
+    .toast.warning {
+      border-left: 4px solid #FF7D00;
+    }
+    
+    .toast.info {
+      border-left: 4px solid #2AC8FF;
+    }
+    
+    .toast-icon {
+      font-size: 20px;
+    }
+    
+    .toast.success .toast-icon {
+      color: #00B42A;
+    }
+    
+    .toast.error .toast-icon {
+      color: #F53F3F;
+    }
+    
+    .toast.warning .toast-icon {
+      color: #FF7D00;
+    }
+    
+    .toast.info .toast-icon {
+      color: #2AC8FF;
+    }
+    
+    .toast-content {
+      flex: 1;
+    }
+    
+    .toast-title {
+      font-weight: bold;
+      margin-bottom: 4px;
+      color: #e0f2ff;
+    }
+    
+    .toast-message {
+      font-size: 14px;
+      color: #99CCFF;
+    }
+    
+    .toast-close {
+      cursor: pointer;
+      color: #99CCFF;
+      transition: all 0.2s;
+    }
+    
+    .toast-close:hover {
+      color: #e0f2ff;
+    }
+    
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes slideOut {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+    }
+    
+    @media (max-width: 1024px) {
+      .main-container {
+        flex-direction: column;
+      }
+      
+      .left-section {
+        display: none;
+      }
+      
+      .right-section {
+        padding: 40px 20px;
+      }
+      
+      .login-card {
+        padding: 40px 30px;
+      }
+      
+      .footer {
+        position: relative;
+        bottom: auto;
+        transform: none;
+        left: auto;
+        margin-top: 30px;
+        padding-bottom: 30px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .login-card {
+        padding: 30px 20px;
+      }
+      
+      .login-title {
+        font-size: 16px;
+      }
+      
+      .system-title {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="tech-grid"></div>
+  <div class="data-stream"></div>
+  
+  <div class="toast-container" id="toast-container"></div>
+  
+  <div class="main-container">
+    <div class="left-section">
+      <h1 class="system-title">智慧交通综合管理系统</h1>
+      <div class="illustration-container">
+        <img 
+          src="8.png" 
+          alt="智慧交通综合管理系统" 
+          class="illustration-img"
+        >
+      </div>
+    </div>
+    
+    <div class="right-section">
+      <div class="login-card">
+        <h2 class="login-title">欢迎登录</h2>
+        
+        <form id="login-form" autocomplete="off">
+          <div class="form-group">
+            <div class="input-wrapper">
+              <i class="fa fa-user input-icon"></i>
+              <input 
+                type="text" 
+                id="username" 
+                name="username" 
+                placeholder="请输入用户名或账号"
+                autocomplete="off"
+                required
+              >
+            </div>
+            <div class="error-message" id="username-error">
+              <i class="fa fa-exclamation-circle"></i> 请输入用户名或账号
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <div class="input-wrapper">
+              <i class="fa fa-lock input-icon"></i>
+              <input 
+                type="password" 
+                id="password" 
+                name="password" 
+                placeholder="请输入密码"
+                autocomplete="new-password"
+                required
+              >
+              <i class="fa fa-eye password-toggle" id="password-toggle"></i>
+            </div>
+            <div class="error-message" id="password-error">
+              <i class="fa fa-exclamation-circle"></i> 请输入密码
+            </div>
+          </div>
+          
+          <div class="remember-me">
+            <input type="checkbox" id="remember" name="remember">
+            <label for="remember">记住我</label>
+          </div>
+          
+          <button type="submit" class="login-button" id="login-button">
+            <span class="spinner"></span>
+            <span class="button-text">登 录</span>
+          </button>
+        </form>
+      </div>
+    </div>
+    
+    <div class="footer">
+      Copyright © 2025 智慧交通综合管理系统 | Intelligent Transportation Management System
+    </div>
+  </div>
+  
+  <script>
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const passwordToggle = document.getElementById('password-toggle');
+    const loginForm = document.getElementById('login-form');
+    const loginButton = document.getElementById('login-button');
+    const usernameError = document.getElementById('username-error');
+    const passwordError = document.getElementById('password-error');
+    
+    passwordToggle.addEventListener('click', function() {
+      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordInput.setAttribute('type', type);
+      this.classList.toggle('fa-eye');
+      this.classList.toggle('fa-eye-slash');
+    });
+    
+    usernameInput.addEventListener('blur', function() {
+      validateUsername();
+    });
+    
+    usernameInput.addEventListener('input', function() {
+      if (this.value.trim()) {
+        clearError(usernameInput, usernameError);
+      }
+    });
+    
+    passwordInput.addEventListener('blur', function() {
+      validatePassword();
+    });
+    
+    passwordInput.addEventListener('input', function() {
+      if (this.value.trim()) {
+        clearError(passwordInput, passwordError);
+      }
+    });
+    
+    function validateUsername() {
+      const value = usernameInput.value.trim();
+      if (!value) {
+        showError(usernameInput, usernameError, '请输入用户名或账号');
+        return false;
+      }
+      clearError(usernameInput, usernameError);
+      return true;
+    }
+    
+    function validatePassword() {
+      const value = passwordInput.value.trim();
+      if (!value) {
+        showError(passwordInput, passwordError, '请输入密码');
+        return false;
+      }
+      if (value.length < 6) {
+        showError(passwordInput, passwordError, '密码长度至少为6位');
+        return false;
+      }
+      clearError(passwordInput, passwordError);
+      return true;
+    }
+    
+    function showError(input, errorElement, message) {
+      input.classList.add('error');
+      input.classList.remove('success');
+      errorElement.innerHTML = `<i class="fa fa-exclamation-circle"></i> ${message}`;
+      errorElement.classList.add('show');
+    }
+    
+    function clearError(input, errorElement) {
+      input.classList.remove('error');
+      input.classList.add('success');
+      errorElement.classList.remove('show');
+    }
+    
+    loginForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const isUsernameValid = validateUsername();
+      const isPasswordValid = validatePassword();
+      
+      if (!isUsernameValid || !isPasswordValid) {
+        showToast('error', '登录失败', '请检查输入信息', 3000);
+        return;
+      }
+      
+      loginButton.classList.add('loading');
+      loginButton.disabled = true;
+      
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value.trim();
+      
+      setTimeout(function() {
+        loginButton.classList.remove('loading');
+        loginButton.disabled = false;
+        
+        if ((username === 'admin' && password === 'admin123') || 
+            (username === 'user' && password === 'user123')) {
+          showToast('success', '登录成功', '正在跳转到系统主页...', 2000);
+          
+          setTimeout(function() {
+            window.location.href = 'index.html';
+          }, 1500);
+        } else {
+          showToast('error', '登录失败', '用户名或密码错误，请重试', 3000);
+          usernameInput.classList.add('error');
+          passwordInput.classList.add('error');
+        }
+      }, 1500);
+    });
+    
+    function showToast(type, title, message, duration = 3000) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      
+      const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-times-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+      };
+      
+      toast.innerHTML = `
+        <i class="fa ${icons[type]} toast-icon"></i>
+        <div class="toast-content">
+          <div class="toast-title">${title}</div>
+          <div class="toast-message">${message}</div>
+        </div>
+        <i class="fa fa-times toast-close"></i>
+      `;
+      
+      container.appendChild(toast);
+      
+      const closeBtn = toast.querySelector('.toast-close');
+      closeBtn.addEventListener('click', function() {
+        removeToast(toast);
+      });
+      
+      if (duration > 0) {
+        setTimeout(function() {
+          removeToast(toast);
+        }, duration);
+      }
+      
+      return toast;
+    }
+    
+    function removeToast(toast) {
+      toast.style.animation = 'slideOut 0.3s ease-out';
+      setTimeout(function() {
+        if (toast.parentElement) {
+          toast.parentElement.removeChild(toast);
+        }
+      }, 300);
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      const rememberedUsername = localStorage.getItem('rememberedUsername');
+      if (rememberedUsername) {
+        usernameInput.value = rememberedUsername;
+        document.getElementById('remember').checked = true;
+      }
+      
+      const rememberCheckbox = document.getElementById('remember');
+      rememberCheckbox.addEventListener('change', function() {
+        if (this.checked && usernameInput.value.trim()) {
+          localStorage.setItem('rememberedUsername', usernameInput.value.trim());
+        } else {
+          localStorage.removeItem('rememberedUsername');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

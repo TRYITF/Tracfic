@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>情报处置子系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0A2B4F',
+                        secondary: '#1E5A9E',
+                        accent: '#0FC6C2',
+                        warning: '#FF7D00',
+                        danger: '#F53F3F',
+                        success: '#00B42A',
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        
+        body {
+            background: #051022;
+            color: #e0f2ff;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cpath d='M0 0 L100 0 L100 100 L0 100 Z' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M0 0 L100 100' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M100 0 L0 100' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Ccircle cx='25' cy='25' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='75' cy='25' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='25' cy='75' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='75' cy='75' r='1' fill='%232AC8FF'/%3E%3Crect x='10' y='10' width='20' height='20' fill='none' stroke='%231a4c7d' stroke-width='0.3'/%3E%3Crect x='70' y='70' width='20' height='20' fill='none' stroke='%231a4c7d' stroke-width='0.3'/%3E%3Cpath d='M30 30 L70 70' stroke='%231a4c7d' stroke-width='0.3'/%3E%3Cpath d='M70 30 L30 70' stroke='%231a4c7d' stroke-width='0.3'/%3E%3C/svg%3E");
+            background-size: 100px 100px;
+            opacity: 0.15;
+            z-index: -1;
+            pointer-events: none;
+        }
+        
+        body::after {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(0deg, transparent 49%, rgba(42, 200, 255, 0.03) 50%, transparent 51%),
+                linear-gradient(90deg, transparent 49%, rgba(15, 198, 194, 0.03) 50%, transparent 51%),
+                radial-gradient(circle at 20% 30%, rgba(42, 200, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(15, 198, 194, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(30, 90, 158, 0.03) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .tech-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(42, 200, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(42, 200, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -1;
+            pointer-events: none;
+        }
+        
+        .tech-grid::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+                radial-gradient(circle at 75% 25%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+                radial-gradient(circle at 25% 75%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+                radial-gradient(circle at 75% 75%, rgba(42, 200, 255, 0.1) 0%, transparent 25%);
+            z-index: -1;
+        }
+        
+        .data-stream {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        
+        .data-stream::before {
+            content: "";
+            position: absolute;
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(180deg, transparent, rgba(42, 200, 255, 0.3), transparent);
+            animation: streamMove 8s linear infinite;
+            left: 10%;
+        }
+        
+        .data-stream::after {
+            content: "";
+            position: absolute;
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(180deg, transparent, rgba(15, 198, 194, 0.3), transparent);
+            animation: streamMove 8s linear infinite reverse;
+            right: 10%;
+        }
+        
+        @keyframes streamMove {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+        
+        .back-button {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            z-index: 100;
+            padding: 8px 16px;
+            background: rgba(31, 75, 124, 0.8);
+            border: 1px solid #2AC8FF;
+            color: #e0f2ff;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 0 8px rgba(42, 200, 255, 0.2);
+        }
+        
+        .back-button:hover {
+            background: #2AC8FF;
+            color: #051022;
+            transform: translateX(-5px);
+            box-shadow: 0 0 15px rgba(42, 200, 255, 0.5);
+        }
+        
+        .header {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            line-height: 60px;
+            background: linear-gradient(90deg, #0a2440, #123a63);
+            border-radius: 12px;
+            box-shadow: 0 0 10px rgba(42, 200, 255, 0.2);
+            margin-bottom: 20px;
+        }
+        
+        .content-section {
+            display: none;
+        }
+        
+        .content-section.active {
+            display: block;
+        }
+        
+        .module-active {
+            background: #0A2B4F !important;
+            color: #0FC6C2 !important;
+            border-left: 4px solid #0FC6C2 !important;
+        }
+        
+        .card {
+            background: linear-gradient(145deg, #0d2540, #15355a);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #1a4c7d;
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, #2AC8FF, #66CCFF, #2AC8FF);
+            animation: glow 3s linear infinite;
+            background-size: 200% auto;
+        }
+        
+        @keyframes glow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #1f4b7c;
+            display: flex;
+            align-items: center;
+        }
+        
+        .card-title i {
+            margin-right: 10px;
+            color: #2AC8FF;
+            text-shadow: 0 0 8px rgba(42, 200, 255, 0.6);
+        }
+        
+        .chart-container {
+            width: 100%;
+            height: 200px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            background: rgba(31, 75, 124, 0.3);
+            border-radius: 6px;
+            transition: all 0.3s;
+            border: 1px solid #1a4c7d;
+        }
+        
+        .stat-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 15px rgba(42, 200, 255, 0.3);
+        }
+        
+        .stat-item i {
+            font-size: 24px;
+            color: #2AC8FF;
+            margin-bottom: 8px;
+            text-shadow: 0 0 10px rgba(42, 200, 255, 0.7);
+        }
+        
+        .stat-item .num {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .stat-item .label {
+            font-size: 12px;
+            color: #99CCFF;
+            margin-top: 4px;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .filter-btn {
+            padding: 6px 12px;
+            background: rgba(31, 75, 124, 0.3);
+            border: 1px solid #1f4b7c;
+            color: #e0f2ff;
+            border-radius: 15px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .filter-btn:hover {
+            background: #2AC8FF;
+            border-color: #2AC8FF;
+            color: #051022;
+        }
+        
+        .filter-btn.active {
+            background: #2AC8FF;
+            border-color: #2AC8FF;
+            color: #051022;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        
+        .data-table th,
+        .data-table td {
+            border: 1px solid #1f4b7c;
+            padding: 10px;
+            text-align: center;
+        }
+        
+        .data-table th {
+            background: #1F4B7C;
+            color: #e0f2ff;
+            font-weight: bold;
+        }
+        
+        .data-table tr:nth-child(even) {
+            background: rgba(31, 75, 124, 0.3);
+        }
+        
+        .data-table tr:hover {
+            background: rgba(42, 200, 255, 0.1);
+            cursor: pointer;
+        }
+        
+        .info-item {
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border: 1px solid #1f4b7c;
+            background: rgba(31, 75, 124, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .info-item:hover {
+            background: rgba(31, 75, 124, 0.4);
+            border-color: #2AC8FF;
+            transform: translateX(5px);
+        }
+        
+        .info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .info-type {
+            font-weight: bold;
+            color: #FF3300;
+        }
+        
+        .info-time {
+            font-size: 12px;
+            color: #99CCFF;
+        }
+        
+        .info-content {
+            font-size: 14px;
+        }
+        
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .toast {
+            min-width: 300px;
+            padding: 16px 20px;
+            border-radius: 8px;
+            background: linear-gradient(145deg, #0d2540, #15355a);
+            border: 1px solid #1a4c7d;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease-out;
+            transition: all 0.3s;
+        }
+        
+        .toast.success { border-left: 4px solid #00B42A; }
+        .toast.error { border-left: 4px solid #F53F3F; }
+        .toast.warning { border-left: 4px solid #FF7D00; }
+        .toast.info { border-left: 4px solid #2AC8FF; }
+        
+        .toast-icon { font-size: 20px; }
+        .toast.success .toast-icon { color: #00B42A; }
+        .toast.error .toast-icon { color: #F53F3F; }
+        .toast.warning .toast-icon { color: #FF7D00; }
+        .toast.info .toast-icon { color: #2AC8FF; }
+        
+        .toast-content { flex: 1; }
+        .toast-title { font-weight: bold; margin-bottom: 4px; color: #e0f2ff; }
+        .toast-message { font-size: 14px; color: #99CCFF; }
+        .toast-close { cursor: pointer; color: #99CCFF; transition: all 0.2s; }
+        .toast-close:hover { color: #e0f2ff; }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(31, 75, 124, 0.3); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: rgba(42, 200, 255, 0.5); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(42, 200, 255, 0.8); }
+    </style>
+</head>
+<body>
+    <div class="tech-grid"></div>
+    <div class="data-stream"></div>
+    
+    <div class="toast-container" id="toast-container"></div>
+    
+    <button class="back-button" onclick="window.location.href='index.html'">
+        <i class="fa fa-arrow-left"></i> 返回主页面
+    </button>
+    
+    <div class="container mx-auto px-4 py-6">
+        <div class="header">情报处置子系统</div>
+        
+        <main class="flex-1 overflow-y-auto flex relative" style="height: calc(100vh - 180px);">
+            <aside class="w-64 bg-secondary/80 backdrop-blur-sm border-r border-primary/50 flex-shrink-0 sticky top-0 h-full overflow-y-auto">
+                <nav class="py-6 h-full flex flex-col">
+                    <h2 class="px-4 text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">核心功能模块</h2>
+                    
+                    <a href="#overview" class="module-active flex items-center px-4 py-3 mb-1 transition">
+                        <i class="fa fa-database w-6 text-center"></i>
+                        <span class="ml-3">情报统计总览</span>
+                    </a>
+                    
+                    <a href="#accept" class="hover:bg-primary/50 flex items-center px-4 py-3 mb-1 transition">
+                        <i class="fa fa-clipboard w-6 text-center"></i>
+                        <span class="ml-3">突发事件受理与核实</span>
+                    </a>
+                    
+                    <a href="#info" class="hover:bg-primary/50 flex items-center px-4 py-3 mb-1 transition">
+                        <i class="fa fa-exchange w-6 text-center"></i>
+                        <span class="ml-3">实时信息交互与情报推送</span>
+                    </a>
+                    
+                    <a href="#dispatch" class="hover:bg-primary/50 flex items-center px-4 py-3 mb-1 transition">
+                        <i class="fa fa-flag w-6 text-center"></i>
+                        <span class="ml-3">基于预案指挥调度</span>
+                    </a>
+                    
+                    <a href="#handle" class="hover:bg-primary/50 flex items-center px-4 py-3 mb-1 transition">
+                        <i class="fa fa-cogs w-6 text-center"></i>
+                        <span class="ml-3">应急处置</span>
+                    </a>
+                    
+                    <a href="#track" class="hover:bg-primary/50 flex items-center px-4 py-3 transition">
+                        <i class="fa fa-history w-6 text-center"></i>
+                        <span class="ml-3">事件跟踪</span>
+                    </a>
+                </nav>
+            </aside>
+
+            <div class="flex-1 p-6 bg-primary/90 overflow-y-auto">
+                <!-- 情报统计总览模块 -->
+                <section id="overview" class="content-section active">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="card">
+                            <div class="card-title"><i class="fa fa-database"></i>情报统计</div>
+                            <div class="stats-grid">
+                                <div class="stat-item">
+                                    <i class="fa fa-envelope"></i>
+                                    <span class="num">1,256</span>
+                                    <span class="label">今日情报总数</span>
+                                </div>
+                                <div class="stat-item">
+                                    <i class="fa fa-check-circle"></i>
+                                    <span class="num">1,089</span>
+                                    <span class="label">已核实情报</span>
+                                </div>
+                                <div class="stat-item">
+                                    <i class="fa fa-clock-o"></i>
+                                    <span class="num">167</span>
+                                    <span class="label">待核实情报</span>
+                                </div>
+                                <div class="stat-item">
+                                    <i class="fa fa-exclamation-triangle"></i>
+                                    <span class="num">89</span>
+                                    <span class="label">重要情报</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-title"><i class="fa fa-pie-chart"></i>信息来源分布</div>
+                            <div class="chart-container" id="source-chart"></div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-title"><i class="fa fa-check-square"></i>核实状态分布</div>
+                            <div class="chart-container" id="verification-chart"></div>
+                        </div>
+                        
+                        <div class="card lg:col-span-2">
+                            <div class="card-title"><i class="fa fa-list"></i>情报处置详情</div>
+                            <div class="filter-buttons">
+                                <button class="filter-btn active" data-type="all">全部情报</button>
+                                <button class="filter-btn" data-type="pending">待核实</button>
+                                <button class="filter-btn" data-type="verified">已核实</button>
+                                <button class="filter-btn" data-type="important">重要情报</button>
+                            </div>
+                            <div style="max-height: 300px; overflow-y: auto;">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>情报编号</th>
+                                            <th>信息来源</th>
+                                            <th>情报类型</th>
+                                            <th>接收时间</th>
+                                            <th>核实状态</th>
+                                            <th>优先级</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="data-row" data-type="important" data-verified="true">
+                                            <td>IN-20250225-001</td>
+                                            <td>市民报警</td>
+                                            <td>交通事故</td>
+                                            <td>2025-02-25 11:30</td>
+                                            <td><span style="color: #00CC66;">已核实-属实</span></td>
+                                            <td><span style="color: #FF3300;">紧急</span></td>
+                                        </tr>
+                                        <tr class="data-row" data-type="pending" data-verified="false">
+                                            <td>IN-20250225-002</td>
+                                            <td>监控发现</td>
+                                            <td>道路拥堵</td>
+                                            <td>2025-02-25 11:15</td>
+                                            <td><span style="color: #FF9900;">待核实</span></td>
+                                            <td><span style="color: #FF9900;">重要</span></td>
+                                        </tr>
+                                        <tr class="data-row" data-type="verified" data-verified="true">
+                                            <td>IN-20250225-003</td>
+                                            <td>舆情信息</td>
+                                            <td>设施故障</td>
+                                            <td>2025-02-25 10:45</td>
+                                            <td><span style="color: #00CC66;">已核实-属实</span></td>
+                                            <td><span style="color: #2AC8FF;">一般</span></td>
+                                        </tr>
+                                        <tr class="data-row" data-type="pending" data-verified="false">
+                                            <td>IN-20250225-004</td>
+                                            <td>巡查上报</td>
+                                            <td>违规停车</td>
+                                            <td>2025-02-25 10:20</td>
+                                            <td><span style="color: #FF9900;">待核实</span></td>
+                                            <td><span style="color: #2AC8FF;">一般</span></td>
+                                        </tr>
+                                        <tr class="data-row" data-type="important" data-verified="true">
+                                            <td>IN-20250225-005</td>
+                                            <td>市民报警</td>
+                                            <td>大雾天气</td>
+                                            <td>2025-02-25 09:55</td>
+                                            <td><span style="color: #00CC66;">已核实-属实</span></td>
+                                            <td><span style="color: #FF3300;">紧急</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-title"><i class="fa fa-bell-o"></i>实时情报信息</div>
+                            <div style="max-height: 300px; overflow-y: auto;">
+                                <div class="info-item">
+                                    <div class="info-header">
+                                        <span class="info-type">紧急 - 交通事故</span>
+                                        <span class="info-time">5分钟前</span>
+                                    </div>
+                                    <div class="info-content">
+                                        来源：市民报警<br>
+                                        地点：紫阳大道与高新大道交叉口<br>
+                                        详情：两车追尾，造成交通拥堵
+                                    </div>
+                                </div>
+                                
+                                <div class="info-item">
+                                    <div class="info-header">
+                                        <span class="info-type">重要 - 道路拥堵</span>
+                                        <span class="info-time">15分钟前</span>
+                                    </div>
+                                    <div class="info-content">
+                                        来源：监控发现<br>
+                                        地点：北京西路<br>
+                                        详情：拥堵长度约1.5公里
+                                    </div>
+                                </div>
+                                
+                                <div class="info-item">
+                                    <div class="info-header">
+                                        <span style="color: #FF9900; font-weight: bold;">重要 - 设施故障</span>
+                                        <span class="info-time">30分钟前</span>
+                                    </div>
+                                    <div class="info-content">
+                                        来源：巡查上报<br>
+                                        地点：洪城路<br>
+                                        详情：交通信号灯故障
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-title"><i class="fa fa-bar-chart"></i>情报来源趋势</div>
+                            <div class="chart-container" id="source-trend-chart"></div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-title"><i class="fa fa-line-chart"></i>情报接收趋势</div>
+                            <div class="chart-container" id="trend-chart"></div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-title"><i class="fa fa-bar-chart"></i>情报推送效率</div>
+                            <div class="chart-container" id="efficiency-chart"></div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 突发事件受理与核实模块 -->
+                <section id="accept" class="content-section">
+                    <div class="bg-secondary/60 rounded-lg overflow-hidden">
+                        <div class="bg-primary/50 border-b border-accent/30 px-6 py-4">
+                            <h2 class="text-lg font-bold flex items-center">
+                                <i class="fa fa-clipboard text-accent mr-2"></i>
+                                突发事件受理与核实模块
+                            </h2>
+                        </div>
+                        
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div class="lg:col-span-2">
+                                    <h3 class="text-md font-semibold mb-4 pb-2 border-b border-gray-700">事件信息录入</h3>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-300 mb-1 flex items-center">
+                                                <i class="fa fa-exclamation-triangle text-accent mr-2"></i>
+                                                事件类型 <span class="text-danger">*</span>
+                                            </label>
+                                            <select class="w-full bg-primary/60 border border-gray-700 rounded-md p-2.5 focus:ring-2 focus:ring-accent focus:border-accent transition text-white">
+                                                <option>交通设施损坏</option>
+                                                <option>道路积水</option>
+                                                <option>道路结冰</option>
+                                                <option>交通事故</option>
+                                                <option>其他突发事件</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-300 mb-1 flex items-center">
+                                                <i class="fa fa-map-marker text-accent mr-2"></i>
+                                                发生地点 <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="text" class="w-full bg-primary/60 border border-gray-700 rounded-md p-2.5 focus:ring-2 focus:ring-accent focus:border-accent transition text-white" value="">
+                                        </div>
+                                        
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-300 mb-1 flex items-center">
+                                                <i class="fa fa-clock-o text-accent mr-2"></i>
+                                                发生时间 <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="datetime-local" class="w-full bg-primary/60 border border-gray-700 rounded-md p-2.5 focus:ring-2 focus:ring-accent focus:border-accent transition text-white" value="2025-10-10T10:05">
+                                        </div>
+                                        
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-300 mb-1 flex items-center">
+                                                <i class="fa fa-signal text-accent mr-2"></i>
+                                                事件等级 <span class="text-danger">*</span>
+                                            </label>
+                                            <select class="w-full bg-primary/60 border border-gray-700 rounded-md p-2.5 focus:ring-2 focus:ring-accent focus:border-accent transition text-white">
+                                                <option>一般事件</option>
+                                                <option selected="">重要事件</option>
+                                                <option>紧急事件</option>
+                                                <option>特别重大事件</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-4">
+                                        <label class="block text-sm font-medium text-gray-300 mb-1 flex items-center">
+                                            <i class="fa fa-file-text-o text-accent mr-2"></i>
+                                            事件描述 <span class="text-danger">*</span>
+                                        </label>
+                                        <textarea class="w-full bg-primary/60 border border-gray-700 rounded-md p-3 h-24 focus:ring-2 focus:ring-accent focus:border-accent transition text-white" placeholder="请描述事件详情..."></textarea>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <h3 class="text-md font-semibold mb-4 pb-2 border-b border-gray-700">核实信息与操作</h3>
+                                    
+                                    <div class="bg-primary/60 rounded-lg p-4 mb-4">
+                                        <h4 class="text-sm font-medium mb-2 text-accent">信息来源</h4>
+                                        <div class="space-y-2">
+                                            <div class="flex items-center">
+                                                <input type="checkbox" id="source1" checked="" class="mr-2">
+                                                <label for="source1" class="text-sm">市民报警</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <input type="checkbox" id="source2" checked="" class="mr-2">
+                                                <label for="source2" class="text-sm">监控发现</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <input type="checkbox" id="source3" class="mr-2">
+                                                <label for="source3" class="text-sm">舆情信息</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <input type="checkbox" id="source4" class="mr-2">
+                                                <label for="source4" class="text-sm">巡查上报</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-primary/60 rounded-lg p-4 mb-4">
+                                        <h4 class="text-sm font-medium mb-2 text-accent">核实状态</h4>
+                                        <div class="space-y-2">
+                                            <div class="flex items-center">
+                                                <input type="radio" name="verify" id="verify1" class="mr-2">
+                                                <label for="verify1" class="text-sm">待核实</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <input type="radio" name="verify" id="verify2" checked="" class="mr-2">
+                                                <label for="verify2" class="text-sm">已核实 - 情况属实</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <input type="radio" name="verify" id="verify3" class="mr-2">
+                                                <label for="verify3" class="text-sm">已核实 - 情况不属实</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="flex space-x-3">
+                                        <button class="flex-1 bg-accent text-primary py-2.5 rounded-md hover:bg-accent/90 transition flex items-center justify-center">
+                                            <i class="fa fa-save mr-1"></i> 保存信息
+                                        </button>
+                                        <button class="flex-1 bg-gray-700/50 text-white py-2.5 rounded-md hover:bg-gray-700 transition flex items-center justify-center">
+                                            <i class="fa fa-times mr-1"></i> 取消
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 实时信息交互与情报推送模块 -->
+                <section id="info" class="content-section">
+                    <div class="bg-secondary/60 rounded-lg overflow-hidden">
+                        <div class="bg-primary/50 border-b border-accent/30 px-6 py-4">
+                            <h2 class="text-lg font-bold flex items-center">
+                                <i class="fa fa-exchange text-accent mr-2"></i>
+                                实时信息交互与情报推送模块
+                            </h2>
+                        </div>
+                        
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div class="lg:col-span-2">
+                                    <h3 class="text-md font-semibold mb-4 pb-2 border-b border-gray-700">实时信息接收</h3>
+                                    
+                                    <div class="space-y-4">
+                                        <div class="bg-primary/60 border border-gray-700 rounded-lg p-3 hover:border-accent/50 transition">
+                                            <div class="flex justify-between items-start">
+                                                <div class="flex items-center">
+                                                    <div class="w-8 h-8 rounded-full bg-blue-900/50 flex items-center justify-center text-accent mr-2">
+                                                        <i class="fa fa-user"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="font-medium text-sm">市民张先生 (报警人)</div>
+                                                        <div class="text-xs text-gray-400">10:15 发送</div>
+                                                    </div>
+                                                </div>
+                                                <span class="text-xs bg-success/20 text-success px-2 py-0.5 rounded">已确认</span>
+                                            </div>
+                                            <div class="mt-2 text-sm pl-10">
+                                                解放路和中山路交叉口的信号灯完全不亮了，现在堵了很长一队车，希望快点派人来修。
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="bg-primary/60 border border-gray-700 rounded-lg p-3 hover:border-accent/50 transition">
+                                            <div class="flex justify-between items-start">
+                                                <div class="flex items-center">
+                                                    <div class="w-8 h-8 rounded-full bg-green-900/50 flex items-center justify-center text-accent mr-2">
+                                                        <i class="fa fa-shield"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="font-medium text-sm">交通巡查员</div>
+                                                        <div class="text-xs text-gray-400">10:22 发送</div>
+                                                    </div>
+                                                </div>
+                                                <span class="text-xs bg-success/20 text-success px-2 py-0.5 rounded">已确认</span>
+                                            </div>
+                                            <div class="mt-2 text-sm pl-10">
+                                                到达现场查看，确实是信号灯控制器故障，需要技术人员携带备件前来维修。
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-4">
+                                        <h3 class="text-md font-semibold mb-3">发送信息</h3>
+                                        <div class="mb-3">
+                                            <label class="block text-sm font-medium text-gray-300 mb-1">信息内容</label>
+                                            <textarea class="w-full bg-primary/60 border border-gray-700 rounded-md p-3 h-20 focus:ring-2 focus:ring-accent focus:border-accent transition text-white" placeholder="请输入要发送的信息..."></textarea>
+                                        </div>
+                                        
+                                        <div class="flex justify-end">
+                                            <button class="bg-accent text-primary px-4 py-2 rounded-md hover:bg-accent/90 transition flex items-center">
+                                                <i class="fa fa-paper-plane mr-1"></i> 发送信息
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <h3 class="text-md font-semibold mb-4 pb-2 border-b border-gray-700">情报推送设置</h3>
+                                    
+                                    <div class="bg-primary/60 rounded-lg p-4 mb-4">
+                                        <h4 class="text-sm font-medium mb-3 text-accent">推送对象设置</h4>
+                                        
+                                        <div class="space-y-3">
+                                            <div class="flex items-center">
+                                                <input type="checkbox" id="dept1" checked="" class="mr-2">
+                                                <label for="dept1" class="text-sm">交警支队</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <input type="checkbox" id="dept2" checked="" class="mr-2">
+                                                <label for="dept2" class="text-sm">市政维修部门</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <input type="checkbox" id="dept3" class="mr-2">
+                                                <label for="dept3" class="text-sm">应急指挥中心</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <button class="w-full bg-warning text-white py-2 rounded-md hover:bg-warning/90 transition flex items-center justify-center text-sm">
+                                        <i class="fa fa-bullhorn mr-1"></i> 发布情报
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 基于预案指挥调度模块 -->
+                <section id="dispatch" class="content-section">
+                    <div class="bg-secondary/60 rounded-lg overflow-hidden">
+                        <div class="bg-primary/50 border-b border-accent/30 px-6 py-4">
+                            <h2 class="text-lg font-bold flex items-center">
+                                <i class="fa fa-flag text-accent mr-2"></i>
+                                基于预案指挥调度模块
+                            </h2>
+                        </div>
+                        
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div>
+                                    <h3 class="text-md font-semibold mb-4 pb-2 border-b border-gray-700">应急预案匹配</h3>
+                                    
+                                    <div class="bg-primary/60 rounded-lg p-4 mb-4">
+                                        <h4 class="text-sm font-medium mb-2 flex items-center text-accent">
+                                            <i class="fa fa-check-circle mr-1"></i> 匹配到的预案
+                                        </h4>
+                                        <div class="border border-accent/50 bg-primary/80 rounded p-3">
+                                            <div class="font-medium text-sm">交通设施故障应急处置预案 v2.0</div>
+                                            <div class="text-xs text-gray-400 mt-1">匹配度: 92%</div>
+                                            <div class="w-full bg-gray-700 rounded-full h-1 mt-1">
+                                                <div class="bg-accent h-1 rounded-full" style="width: 92%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-primary/60 rounded-lg p-4">
+                                        <h4 class="text-sm font-medium mb-3 text-accent">预案执行步骤</h4>
+                                        <div class="space-y-2 text-sm">
+                                            <div class="flex">
+                                                <div class="w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs mr-2 flex-shrink-0">1</div>
+                                                <div>派遣维修人员携带备件前往现场</div>
+                                            </div>
+                                            <div class="flex">
+                                                <div class="w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs mr-2 flex-shrink-0">2</div>
+                                                <div>安排交警到现场疏导交通</div>
+                                            </div>
+                                            <div class="flex">
+                                                <div class="w-6 h-6 rounded-full bg-gray-700 text-gray-400 flex items-center justify-center text-xs mr-2 flex-shrink-0">3</div>
+                                                <div>修复故障设施</div>
+                                            </div>
+                                            <div class="flex">
+                                                <div class="w-6 h-6 rounded-full bg-gray-700 text-gray-400 flex items-center justify-center text-xs mr-2 flex-shrink-0">4</div>
+                                                <div>恢复正常交通秩序</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <h3 class="text-md font-semibold mb-4 pb-2 border-b border-gray-700">指挥调度</h3>
+                                    
+                                    <div class="bg-primary/60 border border-gray-700 rounded-lg p-3 mb-4">
+                                        <div class="flex justify-between items-center mb-2">
+                                            <div class="font-medium text-sm">维修人员调度</div>
+                                            <span class="text-xs bg-success/20 text-success px-2 py-0.5 rounded">已调度</span>
+                                        </div>
+                                        
+                                        <div class="space-y-2 text-sm">
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-300">派遣团队:</span>
+                                                <span>市政维修二队</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-300">负责人:</span>
+                                                <span>王师傅 (138xxxx5678)</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-300">预计到达:</span>
+                                                <span>10:50</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="block text-sm font-medium text-gray-300 mb-1">指令内容</label>
+                                        <textarea class="w-full bg-primary/60 border border-gray-700 rounded-md p-3 h-24 focus:ring-2 focus:ring-accent focus:border-accent transition text-white" placeholder="请输入调度指令内容..."></textarea>
+                                    </div>
+                                    
+                                    <div class="flex justify-end">
+                                        <button class="px-4 py-2 bg-accent text-primary rounded-md hover:bg-accent/90 transition flex items-center">
+                                            <i class="fa fa-send mr-1"></i> 发布指令
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 应急处置模块 -->
+                <section id="handle" class="content-section">
+                    <div class="bg-secondary/60 rounded-lg overflow-hidden">
+                        <div class="bg-primary/50 border-b border-accent/30 px-6 py-4">
+                            <h2 class="text-lg font-bold flex items-center">
+                                <i class="fa fa-cogs text-accent mr-2"></i>
+                                应急处置模块
+                            </h2>
+                        </div>
+                        
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div>
+                                    <h3 class="text-md font-semibold mb-4 pb-2 border-b border-gray-700">处置进度</h3>
+                                    
+                                    <div class="bg-primary/60 rounded-lg p-4 mb-4">
+                                        <div class="flex justify-between items-center mb-2">
+                                            <span class="text-sm font-medium">总体进度</span>
+                                            <span class="text-sm font-medium">40%</span>
+                                        </div>
+                                        <div class="w-full bg-gray-700 rounded-full h-2 mb-4">
+                                            <div class="bg-accent h-2 rounded-full" style="width: 40%"></div>
+                                        </div>
+                                        
+                                        <div class="space-y-3">
+                                            <div>
+                                                <div class="flex justify-between text-xs mb-1">
+                                                    <span>人员到达现场</span>
+                                                    <span>已完成</span>
+                                                </div>
+                                                <div class="w-full bg-gray-700 rounded-full h-1.5">
+                                                    <div class="bg-success h-1.5 rounded-full" style="width: 100%"></div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div>
+                                                <div class="flex justify-between text-xs mb-1">
+                                                    <span>现场情况评估</span>
+                                                    <span>已完成</span>
+                                                </div>
+                                                <div class="w-full bg-gray-700 rounded-full h-1.5">
+                                                    <div class="bg-success h-1.5 rounded-full" style="width: 100%"></div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div>
+                                                <div class="flex justify-between text-xs mb-1">
+                                                    <span>交通疏导</span>
+                                                    <span>进行中 (50%)</span>
+                                                </div>
+                                                <div class="w-full bg-gray-700 rounded-full h-1.5">
+                                                    <div class="bg-warning h-1.5 rounded-full" style="width: 50%"></div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div>
+                                                <div class="flex justify-between text-xs mb-1">
+                                                    <span>设施维修</span>
+                                                    <span>未开始</span>
+                                                </div>
+                                                <div class="w-full bg-gray-700 rounded-full h-1.5">
+                                                    <div class="bg-gray-500 h-1.5 rounded-full" style="width: 0%"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <h3 class="text-md font-semibold mb-4 pb-2 border-b border-gray-700">现场处置记录</h3>
+                                    
+                                    <div class="space-y-4 mb-4">
+                                        <div class="bg-primary/60 border border-gray-700 rounded-lg p-3">
+                                            <div class="flex justify-between items-start">
+                                                <div class="flex items-center">
+                                                    <div class="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center text-accent mr-2">
+                                                        <i class="fa fa-user"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="font-medium text-sm">王师傅 (维修二队)</div>
+                                                        <div class="text-xs text-gray-400">10:55 提交</div>
+                                                    </div>
+                                                </div>
+                                                <span class="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded">现场报告</span>
+                                            </div>
+                                            <div class="mt-2 text-sm pl-9">
+                                                已到达现场，正在检查故障情况。初步判断是信号灯控制器损坏，需要更换备件。
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="block text-sm font-medium text-gray-300 mb-1">记录内容</label>
+                                        <textarea class="w-full bg-primary/60 border border-gray-700 rounded-md p-3 h-24 focus:ring-2 focus:ring-accent focus:border-accent transition text-white" placeholder="请输入处置记录内容..."></textarea>
+                                    </div>
+                                    
+                                    <div class="flex justify-end">
+                                        <button class="bg-accent text-primary px-4 py-2 rounded-md hover:bg-accent/90 transition flex items-center">
+                                            <i class="fa fa-save mr-1"></i> 保存记录
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 事件跟踪模块 -->
+                <section id="track" class="content-section">
+                    <div class="bg-secondary/60 rounded-lg overflow-hidden">
+                        <div class="bg-primary/50 border-b border-accent/30 px-6 py-4">
+                            <h2 class="text-lg font-bold flex items-center">
+                                <i class="fa fa-history text-accent mr-2"></i>
+                                事件跟踪模块
+                            </h2>
+                        </div>
+                        
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div>
+                                    <h3 class="text-md font-semibold mb-4 pb-2 border-b border-gray-700">事件处理时间轴</h3>
+                                    
+                                    <div class="relative">
+                                        <div class="absolute h-full w-0.5 bg-accent/30 left-3 top-0"></div>
+                                        
+                                        <div class="relative pl-10 pb-6">
+                                            <div class="absolute left-0 w-6 h-6 rounded-full bg-primary border-2 border-accent flex items-center justify-center text-white z-10">
+                                                <i class="fa fa-exclamation text-xs"></i>
+                                            </div>
+                                            <div class="font-medium text-sm">事件发生/报警</div>
+                                            <div class="text-xs text-gray-400 mt-0.5">2025-10-10 10:05:23</div>
+                                            <div class="mt-2 text-sm bg-primary/60 p-3 rounded-lg border border-gray-700">
+                                                市民首次报警称解放路辅路交通信号灯故障，造成交通拥堵。
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="relative pl-10 pb-6">
+                                            <div class="absolute left-0 w-6 h-6 rounded-full bg-primary border-2 border-accent flex items-center justify-center text-white z-10">
+                                                <i class="fa fa-check text-xs"></i>
+                                            </div>
+                                            <div class="font-medium text-sm">信息核实</div>
+                                            <div class="text-xs text-gray-400 mt-0.5">2025-10-10 10:18:45</div>
+                                            <div class="mt-2 text-sm bg-primary/60 p-3 rounded-lg border border-gray-700">
+                                                经监控核实，事件属实，确认是交通信号灯控制器故障。
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="relative pl-10 pb-6">
+                                            <div class="absolute left-0 w-6 h-6 rounded-full bg-primary border-2 border-accent flex items-center justify-center text-white z-10">
+                                                <i class="fa fa-send text-xs"></i>
+                                            </div>
+                                            <div class="font-medium text-sm">资源调度</div>
+                                            <div class="text-xs text-gray-400 mt-0.5">2025-10-10 10:35:12</div>
+                                            <div class="mt-2 text-sm bg-primary/60 p-3 rounded-lg border border-gray-700">
+                                                已向市政维修二队和交警一大队发出调度指令。
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <h3 class="text-md font-semibold mb-4 pb-2 border-b border-gray-700">事件状态与归档</h3>
+                                    
+                                    <div class="bg-primary/60 rounded-lg p-4 mb-4">
+                                        <h4 class="text-sm font-medium mb-3 text-accent">当前状态</h4>
+                                        
+                                        <div class="space-y-3 text-sm">
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-300">事件状态:</span>
+                                                <span class="text-warning font-medium">处置中</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-300">当前阶段:</span>
+                                                <span>交通疏导</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-300">处置负责人:</span>
+                                                <span>李警官 / 王师傅</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-300">预计完成时间:</span>
+                                                <span>2025-10-10 12:00</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-primary/60 rounded-lg p-4">
+                                        <h4 class="text-sm font-medium mb-3 text-accent">事件归档</h4>
+                                        
+                                        <div class="mb-3">
+                                            <label class="block text-xs font-medium text-gray-300 mb-1">归档分类</label>
+                                            <select class="w-full bg-primary/80 border border-gray-700 rounded-md p-2.5 text-sm focus:ring-2 focus:ring-accent focus:border-accent transition text-white">
+                                                <option>交通设施故障</option>
+                                                <option>道路交通事故</option>
+                                                <option>道路积水</option>
+                                                <option>其他交通事件</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <button class="w-full bg-gray-700/50 text-white py-2 rounded-md hover:bg-gray-700 transition flex items-center justify-center">
+                                            <i class="fa fa-archive mr-1"></i> 保存跟踪记录
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const moduleLinks = document.querySelectorAll('aside nav a');
+            const contentSections = document.querySelectorAll('.content-section');
+            
+            moduleLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    moduleLinks.forEach(item => {
+                        item.classList.remove('module-active');
+                        item.classList.add('hover:bg-primary/50');
+                    });
+                    
+                    this.classList.add('module-active');
+                    this.classList.remove('hover:bg-primary/50');
+                    
+                    const targetId = this.getAttribute('href').substring(1);
+                    contentSections.forEach(section => {
+                        section.classList.remove('active');
+                    });
+                    document.getElementById(targetId).classList.add('active');
+                });
+            });
+            
+            initCharts();
+            initFilter();
+            
+            showToast('success', '系统加载完成', '欢迎使用情报处置子系统', 2000);
+        });
+        
+        function initCharts() {
+            initSourceChart();
+            initVerificationChart();
+            initSourceTrendChart();
+            initTrendChart();
+            initEfficiencyChart();
+        }
+        
+        function initSourceChart() {
+            const chart = echarts.init(document.getElementById('source-chart'));
+            chart.setOption({
+                backgroundColor: 'transparent',
+                series: [{
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    data: [
+                        { value: 456, name: '市民报警' },
+                        { value: 328, name: '监控发现' },
+                        { value: 245, name: '舆情信息' },
+                        { value: 156, name: '巡查上报' },
+                        { value: 71, name: '其他来源' }
+                    ],
+                    label: {
+                        show: true,
+                        color: '#e0f2ff',
+                        formatter: '{b}: {c}条'
+                    },
+                    itemStyle: {
+                        borderRadius: 8,
+                        borderColor: '#1F4B7C',
+                        borderWidth: 1,
+                        shadowBlur: 15,
+                        shadowColor: 'rgba(42, 200, 255, 0.4)'
+                    },
+                    color: ['#2AC8FF', '#66CCFF', '#99DDFF', '#CCEDFF', '#FF9500']
+                }],
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{a} <br/>{b}: {c}条 ({d}%)'
+                }
+            });
+        }
+        
+        function initVerificationChart() {
+            const chart = echarts.init(document.getElementById('verification-chart'));
+            chart.setOption({
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'shadow' }
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '15%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: ['已核实-属实', '已核实-不属实', '待核实'],
+                    axisLabel: { color: '#e0f2ff', fontSize: 11 },
+                    axisLine: { lineStyle: { color: '#1F4B7C' } }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: { color: '#e0f2ff' },
+                    splitLine: { lineStyle: { color: '#1F4B7C' } }
+                },
+                series: [{
+                    name: '情报数量',
+                    type: 'bar',
+                    data: [856, 233, 167],
+                    itemStyle: {
+                        borderRadius: [8, 8, 0, 0],
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: '#2AC8FF' },
+                            { offset: 1, color: '#66CCFF' }
+                        ])
+                    },
+                    barWidth: '50%'
+                }]
+            });
+        }
+        
+        function initSourceTrendChart() {
+            const chart = echarts.init(document.getElementById('source-trend-chart'));
+            chart.setOption({
+                backgroundColor: 'transparent',
+                tooltip: { trigger: 'axis' },
+                legend: {
+                    data: ['市民报警', '监控发现', '舆情信息'],
+                    textStyle: { color: '#e0f2ff' },
+                    top: 5
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '12%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+                    axisLabel: { color: '#e0f2ff', fontSize: 10 },
+                    axisLine: { lineStyle: { color: '#1F4B7C' } }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: { color: '#e0f2ff' },
+                    splitLine: { lineStyle: { color: '#1F4B7C' } }
+                },
+                series: [
+                    {
+                        name: '市民报警',
+                        type: 'line',
+                        data: [65, 72, 58, 68, 75, 52, 66],
+                        lineStyle: { color: '#2AC8FF', width: 2 },
+                        itemStyle: { color: '#2AC8FF' }
+                    },
+                    {
+                        name: '监控发现',
+                        type: 'line',
+                        data: [48, 52, 45, 55, 48, 42, 38],
+                        lineStyle: { color: '#66CCFF', width: 2 },
+                        itemStyle: { color: '#66CCFF' }
+                    },
+                    {
+                        name: '舆情信息',
+                        type: 'line',
+                        data: [35, 38, 32, 40, 35, 30, 35],
+                        lineStyle: { color: '#99DDFF', width: 2 },
+                        itemStyle: { color: '#99DDFF' }
+                    }
+                ]
+            });
+        }
+        
+        function initTrendChart() {
+            const chart = echarts.init(document.getElementById('trend-chart'));
+            chart.setOption({
+                backgroundColor: 'transparent',
+                tooltip: { trigger: 'axis' },
+                legend: {
+                    data: ['接收情报', '推送情报'],
+                    textStyle: { color: '#e0f2ff' },
+                    top: 10
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '12%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+                    axisLabel: { color: '#e0f2ff', fontSize: 11 },
+                    axisLine: { lineStyle: { color: '#1F4B7C' } }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: { color: '#e0f2ff' },
+                    splitLine: { lineStyle: { color: '#1F4B7C' } }
+                },
+                series: [
+                    {
+                        name: '接收情报',
+                        type: 'line',
+                        data: [142, 156, 138, 165, 152, 128, 145],
+                        lineStyle: { color: '#2AC8FF', width: 3 },
+                        itemStyle: { color: '#2AC8FF' },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(42, 200, 255, 0.3)' },
+                                { offset: 1, color: 'rgba(42, 200, 255, 0.05)' }
+                            ])
+                        }
+                    },
+                    {
+                        name: '推送情报',
+                        type: 'line',
+                        data: [128, 142, 125, 148, 135, 115, 132],
+                        lineStyle: { color: '#66CCFF', width: 3 },
+                        itemStyle: { color: '#66CCFF' }
+                    }
+                ]
+            });
+        }
+        
+        function initEfficiencyChart() {
+            const chart = echarts.init(document.getElementById('efficiency-chart'));
+            chart.setOption({
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'shadow' }
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '15%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+                    axisLabel: { color: '#e0f2ff', fontSize: 11 },
+                    axisLine: { lineStyle: { color: '#1F4B7C' } }
+                },
+                yAxis: {
+                    type: 'value',
+                    max: 100,
+                    axisLabel: { color: '#e0f2ff', formatter: '{value}%' },
+                    splitLine: { lineStyle: { color: '#1F4B7C' } }
+                },
+                series: [
+                    {
+                        name: '核实率',
+                        type: 'bar',
+                        data: [92, 88, 95, 90, 87, 93, 91],
+                        itemStyle: { borderRadius: [8, 8, 0, 0], color: '#2AC8FF' },
+                        barWidth: '40%'
+                    },
+                    {
+                        name: '推送成功率',
+                        type: 'bar',
+                        data: [85, 82, 88, 84, 80, 86, 83],
+                        itemStyle: { borderRadius: [8, 8, 0, 0], color: '#66CCFF' },
+                        barWidth: '40%'
+                    }
+                ]
+            });
+        }
+        
+        function initFilter() {
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            const dataRows = document.querySelectorAll('.data-row');
+            
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    const filterType = btn.getAttribute('data-type');
+                    const filterText = btn.textContent;
+                    
+                    dataRows.forEach(row => {
+                        const rowType = row.getAttribute('data-type');
+                        const isVerified = row.getAttribute('data-verified') === 'true';
+                        
+                        if (filterType === 'all') {
+                            row.style.display = '';
+                        } else if (filterType === 'pending') {
+                            row.style.display = !isVerified ? '' : 'none';
+                        } else if (filterType === 'verified') {
+                            row.style.display = isVerified ? '' : 'none';
+                        } else if (filterType === 'important') {
+                            row.style.display = rowType === 'important' ? '' : 'none';
+                        }
+                    });
+                    
+                    showToast('info', '筛选完成', `已切换至：${filterText}`);
+                });
+            });
+        }
+        
+        function showToast(type, title, message, duration = 3000) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-times-circle',
+                warning: 'fa-exclamation-triangle',
+                info: 'fa-info-circle'
+            };
+            
+            toast.innerHTML = `
+                <i class="fa ${icons[type]} toast-icon"></i>
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+                <i class="fa fa-times toast-close"></i>
+            `;
+            
+            container.appendChild(toast);
+            
+            const closeBtn = toast.querySelector('.toast-close');
+            closeBtn.addEventListener('click', () => {
+                removeToast(toast);
+            });
+            
+            if (duration > 0) {
+                setTimeout(() => {
+                    removeToast(toast);
+                }, duration);
+            }
+            
+            return toast;
+        }
+        
+        function removeToast(toast) {
+            toast.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.parentElement.removeChild(toast);
+                }
+            }, 300);
+        }
+    </script>
+</body>
+</html>

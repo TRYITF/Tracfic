@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>环境监测子系统</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#0A2B4F',
+            secondary: '#1E5A9E',
+            accent: '#0FC6C2',
+            warning: '#FF7D00',
+            danger: '#F53F3F',
+            success: '#00B42A',
+          },
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Microsoft YaHei", sans-serif;
+    }
+    body {
+      background: #051022;
+      color: #e0f2ff;
+      overflow-x: hidden;
+      position: relative;
+    }
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cpath d='M0 0 L100 0 L100 100 L0 100 Z' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M0 0 L100 0 L100 100 L0 100 Z' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M0 0 L100 100' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M100 0 L0 100' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Ccircle cx='25' cy='25' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='75' cy='25' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='25' cy='75' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='75' cy='75' r='1' fill='%232AC8FF'/%3E%3C/svg%3E");
+      background-size: 100px 100px;
+      opacity: 0.15;
+      z-index: -1;
+    }
+    
+    body::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        linear-gradient(0deg, transparent 49%, rgba(42, 200, 255, 0.03) 50%, transparent 51%),
+        linear-gradient(90deg, transparent 49%, rgba(15, 198, 194, 0.03) 50%, transparent 51%),
+        radial-gradient(circle at 20% 30%, rgba(42, 200, 255, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(15, 198, 194, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(30, 90, 158, 0.03) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: -1;
+    }
+    
+    .tech-grid {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(rgba(42, 200, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(42, 200, 255, 0.05) 1px, transparent 1px);
+      background-size: 50px 50px;
+      z-index: -1;
+      pointer-events: none;
+    }
+    
+    .tech-grid::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        radial-gradient(circle at 25% 25%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 75% 25%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 25% 75%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 75% 75%, rgba(42, 200, 255, 0.1) 0%, transparent 25%);
+      z-index: -1;
+    }
+    
+    .data-stream {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    
+    .data-stream::before {
+      content: "";
+      position: absolute;
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(180deg, transparent, rgba(42, 200, 255, 0.3), transparent);
+      animation: streamMove 8s linear infinite;
+      left: 10%;
+    }
+    
+    .data-stream::after {
+      content: "";
+      position: absolute;
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(180deg, transparent, rgba(15, 198, 194, 0.3), transparent);
+      animation: streamMove 8s linear infinite reverse;
+      right: 10%;
+    }
+    
+    @keyframes streamMove {
+      0% { top: 0; }
+      100% { top: 100%; }
+    }
+    
+    .card {
+      background: linear-gradient(145deg, #0d2540, #15355a);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+      border: 1px solid #1a4c7d;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, #2AC8FF, #66CCFF, #2AC8FF);
+      animation: glow 3s linear infinite;
+      background-size: 200% auto;
+    }
+    @keyframes glow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .card-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #1f4b7c;
+      display: flex;
+      align-items: center;
+    }
+    .card-title i {
+      margin-right: 10px;
+      color: #2AC8FF;
+      text-shadow: 0 0 8px rgba(42, 200, 255, 0.6);
+    }
+    .chart-container {
+      width: 100%;
+      height: 200px;
+    }
+    .kpi-card {
+      background: rgba(31, 75, 124, 0.3);
+      border: 1px solid #1f4b7c;
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+      transition: all 0.3s;
+    }
+    .kpi-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 0 15px rgba(42, 200, 255, 0.3);
+    }
+    .kpi-card i {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+    .kpi-card .value {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .kpi-card .label {
+      font-size: 12px;
+      color: #99CCFF;
+    }
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .status-normal {
+      background: rgba(0, 180, 42, 0.2);
+      color: #00B42A;
+      border: 1px solid #00B42A;
+    }
+    .status-warning {
+      background: rgba(255, 125, 0, 0.2);
+      color: #FF7D00;
+      border: 1px solid #FF7D00;
+    }
+    .status-danger {
+      background: rgba(245, 63, 63, 0.2);
+      color: #F53F3F;
+      border: 1px solid #F53F3F;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .data-table th,
+    .data-table td {
+      border: 1px solid #1f4b7c;
+      padding: 10px;
+      text-align: center;
+    }
+    .data-table th {
+      background: #1F4B7C;
+      color: #e0f2ff;
+      font-weight: bold;
+    }
+    .data-table tr:nth-child(even) {
+      background: rgba(31, 75, 124, 0.3);
+    }
+    .data-table tr:hover {
+      background: rgba(42, 200, 255, 0.1);
+    }
+    .back-button {
+      position: absolute;
+      top: 30px;
+      left: 30px;
+      z-index: 100;
+      padding: 8px 16px;
+      background: rgba(31, 75, 124, 0.8);
+      border: 1px solid #2AC8FF;
+      color: #e0f2ff;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .back-button:hover {
+      background: #2AC8FF;
+      color: #051022;
+    }
+    #map {
+      height: 100%;
+      width: 100%;
+      border-radius: 8px;
+    }
+    .leaflet-container {
+      background: #0d2540;
+    }
+    .layer-control {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: rgba(13, 37, 64, 0.95);
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #1a4c7d;
+    }
+    .layer-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .layer-item input {
+      margin-right: 8px;
+    }
+    .layer-item label {
+      cursor: pointer;
+      font-size: 13px;
+    }
+    
+    /* 自定义滚动条样式 */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: rgba(31, 75, 124, 0.3);
+      border-radius: 3px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: rgba(42, 200, 255, 0.5);
+      border-radius: 3px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(42, 200, 255, 0.8);
+    }
+  </style>
+</head>
+<body>
+  <div class="tech-grid"></div>
+  <div class="data-stream"></div>
+  
+  <button class="back-button" onclick="window.location.href='index.html'">
+    <i class="fa fa-arrow-left"></i> 返回主页面
+  </button>
+  
+  <div class="min-h-screen p-6 pt-20">
+    <div class="max-w-7xl mx-auto">
+      <h1 class="text-3xl font-bold text-center mb-8 text-accent">
+        <i class="fa fa-cloud mr-3"></i>环境监测子系统
+      </h1>
+      
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div class="lg:col-span-3">
+          <div class="card">
+            <div class="card-title"><i class="fa fa-map"></i>环境GIS叠加展示</div>
+            
+            <div class="relative" style="height: 500px;">
+              <div id="map"></div>
+              
+              <div class="layer-control">
+                <div style="font-weight: bold; margin-bottom: 10px; color: #2AC8FF;">
+                  <i class="fa fa-layers"></i> 图层控制
+                </div>
+                <div class="layer-item">
+                  <input type="checkbox" id="layer-fog" checked>
+                  <label for="layer-fog"><i class="fa fa-cloud text-gray-400 mr-1"></i>团雾/大雾点位</label>
+                </div>
+                <div class="layer-item">
+                  <input type="checkbox" id="layer-water" checked>
+                  <label for="layer-water"><i class="fa fa-tint text-blue-400 mr-1"></i>积水点位</label>
+                </div>
+                <div class="layer-item">
+                  <input type="checkbox" id="layer-ice" checked>
+                  <label for="layer-ice"><i class="fa fa-snowflake-o text-cyan-400 mr-1"></i>结冰风险路段</label>
+                </div>
+                <div class="layer-item">
+                  <input type="checkbox" id="layer-visibility" checked>
+                  <label for="layer-visibility"><i class="fa fa-eye text-yellow-400 mr-1"></i>能见度等级</label>
+                </div>
+                <div class="layer-item">
+                  <input type="checkbox" id="layer-accident" checked>
+                  <label for="layer-accident"><i class="fa fa-exclamation-triangle text-red-400 mr-1"></i>事故点位</label>
+                </div>
+                <div class="layer-item">
+                  <input type="checkbox" id="layer-congestion" checked>
+                  <label for="layer-congestion"><i class="fa fa-car text-orange-400 mr-1"></i>拥堵路段</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card mt-6">
+            <div class="card-title"><i class="fa fa-list"></i>预警列表</div>
+            
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>预警编号</th>
+                    <th>预警类型</th>
+                    <th>等级</th>
+                    <th>影响范围</th>
+                    <th>建议措施</th>
+                    <th>发布时间</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>EW-20250225-001</td>
+                    <td>大雾预警</td>
+                    <td><span class="status-badge status-danger">红色</span></td>
+                    <td>紫阳大道K10-K15</td>
+                    <td>减速慢行，开启雾灯</td>
+                    <td>2025-02-25 06:30</td>
+                    <td><span class="status-badge status-warning">生效中</span></td>
+                    <td>
+                      <button class="text-accent hover:underline mr-2">详情</button>
+                      <button class="text-warning hover:underline">处置</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>EW-20250225-002</td>
+                    <td>积水预警</td>
+                    <td><span class="status-badge status-warning">橙色</span></td>
+                    <td>丰和大道K5-K8</td>
+                    <td>绕行其他路段</td>
+                    <td>2025-02-25 08:15</td>
+                    <td><span class="status-badge status-warning">生效中</span></td>
+                    <td>
+                      <button class="text-accent hover:underline mr-2">详情</button>
+                      <button class="text-warning hover:underline">处置</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>EW-20250225-003</td>
+                    <td>结冰预警</td>
+                    <td><span class="status-badge status-warning">橙色</span></td>
+                    <td>昌东大桥</td>
+                    <td>谨慎驾驶，降低车速</td>
+                    <td>2025-02-25 05:45</td>
+                    <td><span class="status-badge status-normal">已解除</span></td>
+                    <td>
+                      <button class="text-accent hover:underline mr-2">详情</button>
+                      <button class="text-success hover:underline">通报</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>EW-20250225-004</td>
+                    <td>能见度低</td>
+                    <td><span class="status-badge status-danger">红色</span></td>
+                    <td>八一大道全线</td>
+                    <td>限速40km/h，开启双闪</td>
+                    <td>2025-02-25 07:00</td>
+                    <td><span class="status-badge status-warning">生效中</span></td>
+                    <td>
+                      <button class="text-accent hover:underline mr-2">详情</button>
+                      <button class="text-warning hover:underline">处置</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>EW-20250225-005</td>
+                    <td>团雾预警</td>
+                    <td><span class="status-badge status-warning">橙色</span></td>
+                    <td>阳明路K3-K6</td>
+                    <td>减速慢行，保持车距</td>
+                    <td>2025-02-25 09:20</td>
+                    <td><span class="status-badge status-normal">已解除</span></td>
+                    <td>
+                      <button class="text-accent hover:underline mr-2">详情</button>
+                      <button class="text-success hover:underline">通报</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        
+        <div class="lg:col-span-1">
+          <div class="h-[calc(125vh-200px)] overflow-y-auto pr-2 space-y-6">
+            <div class="card">
+              <div class="card-title"><i class="fa fa-chart-line"></i>环境KPI</div>
+              
+              <div class="grid grid-cols-2 gap-4">
+                <div class="kpi-card">
+                  <i class="fa fa-cloud text-gray-400"></i>
+                  <div class="value text-danger">12</div>
+                  <div class="label">团雾/大雾点位</div>
+                </div>
+                <div class="kpi-card">
+                  <i class="fa fa-tint text-blue-400"></i>
+                  <div class="value text-warning">8</div>
+                  <div class="label">积水点位</div>
+                </div>
+                <div class="kpi-card">
+                  <i class="fa fa-snowflake-o text-cyan-400"></i>
+                  <div class="value text-warning">5</div>
+                  <div class="label">结冰风险路段</div>
+                </div>
+                <div class="kpi-card">
+                  <i class="fa fa-eye text-yellow-400"></i>
+                  <div class="value text-danger">3</div>
+                  <div class="label">低能见度区域</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card">
+              <div class="card-title"><i class="fa fa-pie-chart"></i>能见度等级分布</div>
+              <div class="chart-container" id="visibility-chart"></div>
+            </div>
+            
+            <div class="card">
+              <div class="card-title"><i class="fa fa-exclamation-triangle"></i>预警统计</div>
+              
+              <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-300">红色预警</span>
+                  <span class="text-danger font-bold">3</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-300">橙色预警</span>
+                  <span class="text-warning font-bold">5</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-300">黄色预警</span>
+                  <span class="text-accent font-bold">8</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-300">蓝色预警</span>
+                  <span class="text-success font-bold">12</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card">
+              <div class="card-title"><i class="fa fa-bell"></i>快速操作</div>
+              
+              <div class="space-y-3">
+                <button class="w-full bg-danger/20 border border-danger text-danger py-2 rounded hover:bg-danger hover:text-white transition">
+                  <i class="fa fa-bullhorn mr-2"></i>发布预警
+                </button>
+                <button class="w-full bg-warning/20 border border-warning text-warning py-2 rounded hover:bg-warning hover:text-white transition">
+                  <i class="fa fa-exchange mr-2"></i>联动应急处置
+                </button>
+                <button class="w-full bg-success/20 border border-success text-success py-2 rounded hover:bg-success hover:text-white transition">
+                  <i class="fa fa-file-text mr-2"></i>形成通报
+                </button>
+                <button class="w-full bg-accent/20 border border-accent text-accent py-2 rounded hover:bg-accent hover:text-primary transition">
+                  <i class="fa fa-download mr-2"></i>导出数据
+                </button>
+              </div>
+            </div>
+            
+            <div class="card">
+              <div class="card-title"><i class="fa fa-history"></i>预警趋势</div>
+              <div class="chart-container" id="warning-trend-chart"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    let map;
+    let layers = {};
+    let charts = {};
+    
+    function initMap() {
+      map = L.map('map').setView([28.6823, 115.9096], 12);
+      
+      // 高德影像地图（卫星图）
+      L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}', {
+        subdomains: ['1', '2', '3', '4'],
+        attribution: '© 高德地图',
+        maxZoom: 18,
+        minZoom: 5
+      }).addTo(map);
+      
+      layers.fog = L.layerGroup();
+      layers.water = L.layerGroup();
+      layers.ice = L.layerGroup();
+      layers.visibility = L.layerGroup();
+      layers.accident = L.layerGroup();
+      layers.congestion = L.layerGroup();
+      
+      const fogPoints = [
+        { lat: 28.6823, lng: 115.8896, name: '紫阳大道K12', level: '严重' },
+        { lat: 28.6723, lng: 115.8996, name: '紫阳大道K14', level: '严重' },
+        { lat: 28.6623, lng: 115.9096, name: '紫阳大道K10', level: '中度' },
+        { lat: 28.6923, lng: 115.9196, name: '八一大道K5', level: '中度' },
+        { lat: 28.7023, lng: 115.9296, name: '八一大道K8', level: '轻度' },
+        { lat: 28.6523, lng: 115.8796, name: '丰和大道K6', level: '中度' },
+        { lat: 28.6423, lng: 115.8696, name: '丰和大道K7', level: '轻度' },
+        { lat: 28.7123, lng: 115.9396, name: '昌东大道K3', level: '严重' },
+        { lat: 28.7223, lng: 115.9496, name: '昌东大道K4', level: '中度' },
+        { lat: 28.7323, lng: 115.9596, name: '昌东大道K5', level: '轻度' },
+        { lat: 28.6823, lng: 115.8696, name: '阳明路K4', level: '严重' },
+        { lat: 28.6923, lng: 115.8596, name: '阳明路K5', level: '中度' }
+      ];
+      
+      fogPoints.forEach(point => {
+        const color = point.level === '严重' ? '#F53F3F' : point.level === '中度' ? '#FF7D00' : '#2AC8FF';
+        const icon = L.divIcon({
+          html: `<div style="width: 30px; height: 30px; background: ${color}; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px ${color}; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px;"><i class="fa fa-cloud"></i></div>`,
+          className: '',
+          iconSize: [30, 30]
+        });
+        L.marker([point.lat, point.lng], { icon })
+          .bindPopup(`<b>${point.name}</b><br>雾情等级: ${point.level}`)
+          .addTo(layers.fog);
+      });
+      
+      const waterPoints = [
+        { lat: 28.6753, lng: 115.8956, name: '丰和大道K6', depth: '30cm' },
+        { lat: 28.6653, lng: 115.9056, name: '丰和大道K7', depth: '25cm' },
+        { lat: 28.6853, lng: 115.8856, name: '丰和大道K5', depth: '20cm' },
+        { lat: 28.6953, lng: 115.8756, name: '丰和大道K8', depth: '35cm' },
+        { lat: 28.7053, lng: 115.9656, name: '昌东大道K6', depth: '28cm' },
+        { lat: 28.7153, lng: 115.9756, name: '昌东大道K7', depth: '22cm' },
+        { lat: 28.7253, lng: 115.9856, name: '昌东大道K8', depth: '18cm' },
+        { lat: 28.7353, lng: 115.9956, name: '昌东大道K9', depth: '32cm' }
+      ];
+      
+      waterPoints.forEach(point => {
+        const icon = L.divIcon({
+          html: `<div style="width: 30px; height: 30px; background: #2AC8FF; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px #2AC8FF; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px;"><i class="fa fa-tint"></i></div>`,
+          className: '',
+          iconSize: [30, 30]
+        });
+        L.marker([point.lat, point.lng], { icon })
+          .bindPopup(`<b>${point.name}</b><br>积水深度: ${point.depth}`)
+          .addTo(layers.water);
+      });
+      
+      const iceRoads = [
+        { lat: 28.6803, lng: 115.9206, name: '昌东大桥', risk: '高风险' },
+        { lat: 28.6703, lng: 115.9306, name: '昌东大桥北引桥', risk: '中风险' },
+        { lat: 28.6903, lng: 115.9106, name: '昌东大桥南引桥', risk: '中风险' },
+        { lat: 28.6603, lng: 115.9406, name: '赣江大桥', risk: '高风险' },
+        { lat: 28.6503, lng: 115.9506, name: '赣江大桥北引桥', risk: '中风险' }
+      ];
+      
+      iceRoads.forEach(point => {
+        const color = point.risk === '高风险' ? '#F53F3F' : '#FF7D00';
+        const icon = L.divIcon({
+          html: `<div style="width: 30px; height: 30px; background: ${color}; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px ${color}; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px;"><i class="fa fa-snowflake-o"></i></div>`,
+          className: '',
+          iconSize: [30, 30]
+        });
+        L.marker([point.lat, point.lng], { icon })
+          .bindPopup(`<b>${point.name}</b><br>结冰风险: ${point.risk}`)
+          .addTo(layers.ice);
+      });
+      
+      const visibilityAreas = [
+        { lat: 28.6823, lng: 115.8896, radius: 1500, level: '极低', value: '<50m' },
+        { lat: 28.6923, lng: 115.9196, radius: 1200, level: '低', value: '50-100m' },
+        { lat: 28.6723, lng: 115.8996, radius: 1000, level: '较低', value: '100-200m' },
+        { lat: 28.7023, lng: 115.9296, radius: 800, level: '一般', value: '200-500m' }
+      ];
+      
+      visibilityAreas.forEach(area => {
+        const color = area.level === '极低' ? 'rgba(245, 63, 63, 0.3)' : 
+                     area.level === '低' ? 'rgba(255, 125, 0, 0.3)' :
+                     area.level === '较低' ? 'rgba(42, 200, 255, 0.3)' : 'rgba(0, 180, 42, 0.3)';
+        L.circle([area.lat, area.lng], {
+          radius: area.radius,
+          color: area.level === '极低' ? '#F53F3F' : area.level === '低' ? '#FF7D00' : area.level === '较低' ? '#2AC8FF' : '#00B42A',
+          fillColor: color,
+          fillOpacity: 0.5
+        })
+        .bindPopup(`<b>能见度区域</b><br>等级: ${area.level}<br>能见度: ${area.value}`)
+        .addTo(layers.visibility);
+      });
+      
+      const accidentPoints = [
+        { lat: 28.6783, lng: 115.8986, type: '追尾事故' },
+        { lat: 28.6883, lng: 115.9186, type: '碰撞事故' },
+        { lat: 28.6683, lng: 115.8886, type: '侧翻事故' }
+      ];
+      
+      accidentPoints.forEach(point => {
+        const icon = L.divIcon({
+          html: `<div style="width: 30px; height: 30px; background: #F53F3F; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px #F53F3F; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px;"><i class="fa fa-exclamation-triangle"></i></div>`,
+          className: '',
+          iconSize: [30, 30]
+        });
+        L.marker([point.lat, point.lng], { icon })
+          .bindPopup(`<b>${point.type}</b>`)
+          .addTo(layers.accident);
+      });
+      
+      const congestionRoads = [
+        { lat: 28.6823, lng: 115.8896, name: '八一大道', level: '严重拥堵' },
+        { lat: 28.6723, lng: 115.8996, name: '紫阳大道', level: '中度拥堵' },
+        { lat: 28.6923, lng: 115.9196, name: '丰和大道', level: '中度拥堵' }
+      ];
+      
+      congestionRoads.forEach(point => {
+        const color = point.level === '严重拥堵' ? '#F53F3F' : '#FF7D00';
+        const icon = L.divIcon({
+          html: `<div style="width: 30px; height: 30px; background: ${color}; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px ${color}; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px;"><i class="fa fa-car"></i></div>`,
+          className: '',
+          iconSize: [30, 30]
+        });
+        L.marker([point.lat, point.lng], { icon })
+          .bindPopup(`<b>${point.name}</b><br>${point.level}`)
+          .addTo(layers.congestion);
+      });
+      
+      layers.visibility.addTo(map);
+      layers.fog.addTo(map);
+      layers.water.addTo(map);
+      layers.ice.addTo(map);
+      layers.accident.addTo(map);
+      layers.congestion.addTo(map);
+      
+      document.getElementById('layer-fog').addEventListener('change', function() {
+        if (this.checked) {
+          map.addLayer(layers.fog);
+        } else {
+          map.removeLayer(layers.fog);
+        }
+      });
+      
+      document.getElementById('layer-water').addEventListener('change', function() {
+        if (this.checked) {
+          map.addLayer(layers.water);
+        } else {
+          map.removeLayer(layers.water);
+        }
+      });
+      
+      document.getElementById('layer-ice').addEventListener('change', function() {
+        if (this.checked) {
+          map.addLayer(layers.ice);
+        } else {
+          map.removeLayer(layers.ice);
+        }
+      });
+      
+      document.getElementById('layer-visibility').addEventListener('change', function() {
+        if (this.checked) {
+          map.addLayer(layers.visibility);
+          // 确保其他图层在能见度区域之上
+          if (document.getElementById('layer-fog').checked) map.addLayer(layers.fog);
+          if (document.getElementById('layer-water').checked) map.addLayer(layers.water);
+          if (document.getElementById('layer-ice').checked) map.addLayer(layers.ice);
+          if (document.getElementById('layer-accident').checked) map.addLayer(layers.accident);
+          if (document.getElementById('layer-congestion').checked) map.addLayer(layers.congestion);
+        } else {
+          map.removeLayer(layers.visibility);
+        }
+      });
+      
+      document.getElementById('layer-accident').addEventListener('change', function() {
+        if (this.checked) {
+          map.addLayer(layers.accident);
+        } else {
+          map.removeLayer(layers.accident);
+        }
+      });
+      
+      document.getElementById('layer-congestion').addEventListener('change', function() {
+        if (this.checked) {
+          map.addLayer(layers.congestion);
+        } else {
+          map.removeLayer(layers.congestion);
+        }
+      });
+    }
+    
+    function initVisibilityChart() {
+      const chart = echarts.init(document.getElementById('visibility-chart'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'item' },
+        series: [{
+          type: 'pie',
+          radius: ['40%', '70%'],
+          data: [
+            { value: 3, name: '极低(<50m)' },
+            { value: 5, name: '低(50-100m)' },
+            { value: 8, name: '较低(100-200m)' },
+            { value: 12, name: '一般(200-500m)' }
+          ],
+          label: {
+            show: true,
+            color: '#e0f2ff',
+            formatter: '{b}\n{c}处',
+            fontSize: 11
+          },
+          itemStyle: {
+            borderRadius: 8,
+            borderColor: '#1F4B7C',
+            borderWidth: 1,
+            shadowBlur: 15,
+            shadowColor: 'rgba(42, 200, 255, 0.4)'
+          },
+          color: ['#2AC8FF', '#66CCFF', '#99DDFF', '#CCEDFF'],
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 25,
+              shadowColor: 'rgba(42, 200, 255, 0.8)',
+              scale: 1.1
+            }
+          }
+        }]
+      });
+      charts['visibility'] = chart;
+    }
+    
+    function initWarningTrendChart() {
+      const chart = echarts.init(document.getElementById('warning-trend-chart'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis' },
+        xAxis: {
+          type: 'category',
+          data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+          axisLabel: { color: '#e0f2ff', fontSize: 10 },
+          axisLine: { lineStyle: { color: '#1F4B7C' } }
+        },
+        yAxis: {
+          type: 'value',
+          axisLabel: { color: '#e0f2ff' },
+          splitLine: { lineStyle: { color: '#1F4B7C' } }
+        },
+        series: [{
+          type: 'line',
+          data: [8, 12, 10, 15, 18, 14, 16],
+          lineStyle: { color: '#FF7D00', width: 2 },
+          itemStyle: { color: '#FF7D00' },
+          areaStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: 'rgba(255, 125, 0, 0.3)' },
+              { offset: 1, color: 'rgba(255, 125, 0, 0.05)' }
+            ])
+          }
+        }]
+      });
+      charts['warning-trend'] = chart;
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      initMap();
+      initVisibilityChart();
+      initWarningTrendChart();
+      
+      window.addEventListener('resize', () => {
+        Object.values(charts).forEach(chart => chart.resize());
+        map.invalidateSize();
+      });
+    });
+  </script>
+</body>
+</html>

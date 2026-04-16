@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>重点车辆监管子系统</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#0A2B4F',
+            secondary: '#1E5A9E',
+            accent: '#0FC6C2',
+            warning: '#FF7D00',
+            danger: '#F53F3F',
+            success: '#00B42A',
+          },
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Microsoft YaHei", sans-serif;
+    }
+    body {
+      background: #051022;
+      color: #e0f2ff;
+      overflow-x: hidden;
+      position: relative;
+    }
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cpath d='M0 0 L100 0 L100 100 L0 100 Z' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M0 0 L100 0 L100 100 L0 100 Z' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M0 0 L100 100' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M100 0 L0 100' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Ccircle cx='25' cy='25' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='75' cy='25' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='25' cy='75' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='75' cy='75' r='1' fill='%232AC8FF'/%3E%3C/svg%3E");
+      background-size: 100px 100px;
+      opacity: 0.15;
+      z-index: -1;
+    }
+    
+    body::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        linear-gradient(0deg, transparent 49%, rgba(42, 200, 255, 0.03) 50%, transparent 51%),
+        linear-gradient(90deg, transparent 49%, rgba(15, 198, 194, 0.03) 50%, transparent 51%),
+        radial-gradient(circle at 20% 30%, rgba(42, 200, 255, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(15, 198, 194, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(30, 90, 158, 0.03) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: -1;
+    }
+    
+    .tech-grid {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(rgba(42, 200, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(42, 200, 255, 0.05) 1px, transparent 1px);
+      background-size: 50px 50px;
+      z-index: -1;
+      pointer-events: none;
+    }
+    
+    .tech-grid::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        radial-gradient(circle at 25% 25%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 75% 25%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 25% 75%, rgba(42, 200, 255, 0.1) 0%, transparent 25%),
+        radial-gradient(circle at 75% 75%, rgba(42, 200, 255, 0.1) 0%, transparent 25%);
+      z-index: -1;
+    }
+    
+    .data-stream {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    
+    .data-stream::before {
+      content: "";
+      position: absolute;
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(180deg, transparent, rgba(42, 200, 255, 0.3), transparent);
+      animation: streamMove 8s linear infinite;
+      left: 10%;
+    }
+    
+    .data-stream::after {
+      content: "";
+      position: absolute;
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(180deg, transparent, rgba(15, 198, 194, 0.3), transparent);
+      animation: streamMove 8s linear infinite reverse;
+      right: 10%;
+    }
+    
+    @keyframes streamMove {
+      0% { top: 0; }
+      100% { top: 100%; }
+    }
+    
+    .card {
+      background: linear-gradient(145deg, #0d2540, #15355a);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+      border: 1px solid #1a4c7d;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, #2AC8FF, #66CCFF, #2AC8FF);
+      animation: glow 3s linear infinite;
+      background-size: 200% auto;
+    }
+    @keyframes glow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .card-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #1f4b7c;
+      display: flex;
+      align-items: center;
+    }
+    .card-title i {
+      margin-right: 10px;
+      color: #2AC8FF;
+      text-shadow: 0 0 8px rgba(42, 200, 255, 0.6);
+    }
+    .module-btn {
+      padding: 12px 20px;
+      background: rgba(31, 75, 124, 0.3);
+      border: 1px solid #1f4b7c;
+      color: #e0f2ff;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      white-space: nowrap;
+    }
+    .module-btn:hover {
+      background: #2AC8FF;
+      border-color: #2AC8FF;
+      color: #051022;
+      transform: translateX(5px);
+    }
+    .module-btn.active {
+      background: #2AC8FF;
+      border-color: #2AC8FF;
+      color: #051022;
+    }
+    .chart-container {
+      width: 100%;
+      height: 250px;
+    }
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .status-normal {
+      background: rgba(0, 180, 42, 0.2);
+      color: #00B42A;
+      border: 1px solid #00B42A;
+    }
+    .status-warning {
+      background: rgba(255, 125, 0, 0.2);
+      color: #FF7D00;
+      border: 1px solid #FF7D00;
+    }
+    .status-danger {
+      background: rgba(245, 63, 63, 0.2);
+      color: #F53F3F;
+      border: 1px solid #F53F3F;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .data-table th,
+    .data-table td {
+      border: 1px solid #1f4b7c;
+      padding: 10px;
+      text-align: center;
+    }
+    .data-table th {
+      background: #1F4B7C;
+      color: #e0f2ff;
+      font-weight: bold;
+    }
+    .data-table tr:nth-child(even) {
+      background: rgba(31, 75, 124, 0.3);
+    }
+    .data-table tr:hover {
+      background: rgba(42, 200, 255, 0.1);
+    }
+    .back-button {
+      position: absolute;
+      top: 30px;
+      left: 30px;
+      z-index: 100;
+      padding: 8px 16px;
+      background: rgba(31, 75, 124, 0.8);
+      border: 1px solid #2AC8FF;
+      color: #e0f2ff;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .back-button:hover {
+      background: #2AC8FF;
+      color: #051022;
+    }
+    #map {
+      height: 100%;
+      width: 100%;
+      border-radius: 8px;
+    }
+    .leaflet-container {
+      background: #0d2540;
+    }
+    
+    .module-btn:active {
+      transform: translateX(5px) scale(0.95);
+    }
+    
+    .module-btn:focus-visible {
+      outline: 2px solid #2AC8FF;
+      outline-offset: 2px;
+    }
+    
+    .back-button:active {
+      transform: scale(0.95);
+    }
+    
+    .back-button:focus-visible {
+      outline: 2px solid #2AC8FF;
+      outline-offset: 2px;
+    }
+    
+    .data-table tr:active {
+      background: rgba(42, 200, 255, 0.2);
+    }
+    
+    button, a {
+      outline: none;
+    }
+    
+    button:focus-visible, a:focus-visible {
+      outline: 2px solid #2AC8FF;
+      outline-offset: 2px;
+    }
+    
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .toast {
+      min-width: 300px;
+      padding: 16px 20px;
+      border-radius: 8px;
+      background: linear-gradient(145deg, #0d2540, #15355a);
+      border: 1px solid #1a4c7d;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: slideIn 0.3s ease-out;
+      transition: all 0.3s;
+    }
+    
+    .toast.success {
+      border-left: 4px solid #00B42A;
+    }
+    
+    .toast.error {
+      border-left: 4px solid #F53F3F;
+    }
+    
+    .toast.warning {
+      border-left: 4px solid #FF7D00;
+    }
+    
+    .toast.info {
+      border-left: 4px solid #2AC8FF;
+    }
+    
+    .toast-icon {
+      font-size: 20px;
+    }
+    
+    .toast.success .toast-icon {
+      color: #00B42A;
+    }
+    
+    .toast.error .toast-icon {
+      color: #F53F3F;
+    }
+    
+    .toast.warning .toast-icon {
+      color: #FF7D00;
+    }
+    
+    .toast.info .toast-icon {
+      color: #2AC8FF;
+    }
+    
+    .toast-content {
+      flex: 1;
+    }
+    
+    .toast-title {
+      font-weight: bold;
+      margin-bottom: 4px;
+      color: #e0f2ff;
+    }
+    
+    .toast-message {
+      font-size: 14px;
+      color: #99CCFF;
+    }
+    
+    .toast-close {
+      cursor: pointer;
+      color: #99CCFF;
+      transition: all 0.2s;
+    }
+    
+    .toast-close:hover {
+      color: #e0f2ff;
+    }
+    
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes slideOut {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+    }
+    
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(5, 16, 34, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9998;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s;
+    }
+    
+    .loading-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .loading-spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid rgba(42, 200, 255, 0.2);
+      border-top-color: #2AC8FF;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(42, 200, 255, 0.3);
+      transform: scale(0);
+      animation: ripple 0.6s linear;
+      pointer-events: none;
+    }
+    
+    @keyframes ripple {
+      to {
+        transform: scale(4);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="tech-grid"></div>
+  <div class="data-stream"></div>
+  
+  <div class="toast-container" id="toast-container"></div>
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-spinner"></div>
+  </div>
+  
+  <button class="back-button" onclick="window.location.href='index.html'">
+    <i class="fa fa-arrow-left"></i> 返回主页面
+  </button>
+  
+  <div class="min-h-screen p-6 pt-20">
+    <div class="max-w-7xl mx-auto">
+      <h1 class="text-3xl font-bold text-center mb-8 text-accent">
+        <i class="fa fa-truck mr-3"></i>重点车辆监管子系统
+      </h1>
+      
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div class="lg:col-span-1">
+          <div class="card">
+            <div class="card-title"><i class="fa fa-list"></i>功能模块</div>
+            <div class="space-y-3">
+              <button class="module-btn active" data-module="trajectory">
+                <i class="fa fa-map-marker"></i>轨迹接入与管理
+              </button>
+              <button class="module-btn" data-module="warning">
+                <i class="fa fa-exclamation-circle"></i>事故违法预警
+              </button>
+              <button class="module-btn" data-module="abnormal">
+                <i class="fa fa-warning"></i>异常行为预警
+              </button>
+              <button class="module-btn" data-module="score">
+                <i class="fa fa-star"></i>积分管控
+              </button>
+              <button class="module-btn" data-module="pattern">
+                <i class="fa fa-line-chart"></i>轨迹规律挖掘
+              </button>
+            </div>
+          </div>
+          
+          <div class="card mt-6">
+            <div class="card-title"><i class="fa fa-chart-bar"></i>监管统计</div>
+            <div class="space-y-4">
+              <div class="flex justify-between items-center">
+                <span class="text-gray-300">监管车辆总数</span>
+                <span class="text-accent font-bold">3,256</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-300">在线车辆</span>
+                <span class="text-success font-bold">2,847</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-300">离线车辆</span>
+                <span class="text-warning font-bold">409</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-300">今日预警</span>
+                <span class="text-danger font-bold">127</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="lg:col-span-3">
+          <div class="card" id="trajectory-module">
+            <div class="card-title"><i class="fa fa-map-marker"></i>轨迹接入与管理</div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-truck text-3xl text-accent mb-2"></i>
+                <div class="text-2xl font-bold">3,256</div>
+                <div class="text-sm text-gray-400">监管车辆</div>
+              </div>
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-check-circle text-3xl text-success mb-2"></i>
+                <div class="text-2xl font-bold">2,847</div>
+                <div class="text-sm text-gray-400">在线车辆</div>
+              </div>
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-times-circle text-3xl text-warning mb-2"></i>
+                <div class="text-2xl font-bold">409</div>
+                <div class="text-sm text-gray-400">离线车辆</div>
+              </div>
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-exclamation-triangle text-3xl text-danger mb-2"></i>
+                <div class="text-2xl font-bold">127</div>
+                <div class="text-sm text-gray-400">今日预警</div>
+              </div>
+            </div>
+            
+            <div style="height: 400px; margin-bottom: 20px;">
+              <div id="map"></div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <h3 class="text-lg font-semibold mb-4 text-accent">车辆状态分布</h3>
+                <div class="chart-container" id="vehicle-status-chart"></div>
+              </div>
+              
+              <div>
+                <h3 class="text-lg font-semibold mb-4 text-accent">车辆类型分布</h3>
+                <div class="chart-container" id="vehicle-type-chart"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card mt-6" id="warning-module" style="display: none;">
+            <div class="card-title"><i class="fa fa-exclamation-circle"></i>事故违法预警</div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-tachometer text-3xl text-danger mb-2"></i>
+                <div class="text-2xl font-bold">45</div>
+                <div class="text-sm text-gray-400">超速预警</div>
+              </div>
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-ban text-3xl text-warning mb-2"></i>
+                <div class="text-2xl font-bold">32</div>
+                <div class="text-sm text-gray-400">闯红灯预警</div>
+              </div>
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-bed text-3xl text-warning mb-2"></i>
+                <div class="text-2xl font-bold">28</div>
+                <div class="text-sm text-gray-400">疲劳驾驶预警</div>
+              </div>
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-car text-3xl text-danger mb-2"></i>
+                <div class="text-2xl font-bold">22</div>
+                <div class="text-sm text-gray-400">事故预警</div>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <h3 class="text-lg font-semibold mb-4 text-accent">预警类型分布</h3>
+                <div class="chart-container" id="warning-type-chart"></div>
+              </div>
+              
+              <div>
+                <h3 class="text-lg font-semibold mb-4 text-accent">预警时段分析</h3>
+                <div class="chart-container" id="warning-time-chart"></div>
+              </div>
+            </div>
+            
+            <div class="mt-6">
+              <h3 class="text-lg font-semibold mb-4 text-accent">实时预警列表</h3>
+              <div class="overflow-x-auto">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>预警编号</th>
+                      <th>车牌号</th>
+                      <th>所属企业</th>
+                      <th>预警类型</th>
+                      <th>发生时间</th>
+                      <th>位置</th>
+                      <th>状态</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>VW-20250225-001</td>
+                      <td>赣A·12345</td>
+                      <td>通达物流有限公司</td>
+                      <td>超速行驶</td>
+                      <td>2025-02-25 11:30</td>
+                      <td>紫阳大道K12+500</td>
+                      <td><span class="status-badge status-danger">未处理</span></td>
+                      <td><button class="text-accent hover:underline">处置</button></td>
+                    </tr>
+                    <tr>
+                      <td>VW-20250225-002</td>
+                      <td>赣A·56789</td>
+                      <td>快捷物流股份公司</td>
+                      <td>闯红灯</td>
+                      <td>2025-02-25 11:15</td>
+                      <td>八一大道与北京路交叉口</td>
+                      <td><span class="status-badge status-danger">未处理</span></td>
+                      <td><button class="text-accent hover:underline">处置</button></td>
+                    </tr>
+                    <tr>
+                      <td>VW-20250225-003</td>
+                      <td>赣A·24680</td>
+                      <td>恒信建筑工程公司</td>
+                      <td>疲劳驾驶</td>
+                      <td>2025-02-25 10:45</td>
+                      <td>丰和大道K6+200</td>
+                      <td><span class="status-badge status-warning">处理中</span></td>
+                      <td><button class="text-accent hover:underline">处置</button></td>
+                    </tr>
+                    <tr>
+                      <td>VW-20250225-004</td>
+                      <td>赣A·13579</td>
+                      <td>南方建筑工程局</td>
+                      <td>超速行驶</td>
+                      <td>2025-02-25 10:20</td>
+                      <td>昌东大道K8+300</td>
+                      <td><span class="status-badge status-warning">处理中</span></td>
+                      <td><button class="text-accent hover:underline">处置</button></td>
+                    </tr>
+                    <tr>
+                      <td>VW-20250225-005</td>
+                      <td>赣A·97531</td>
+                      <td>东方制造集团</td>
+                      <td>偏离路线</td>
+                      <td>2025-02-25 09:55</td>
+                      <td>阳明路K4+100</td>
+                      <td><span class="status-badge status-normal">已处理</span></td>
+                      <td><button class="text-accent hover:underline">详情</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card mt-6" id="abnormal-module" style="display: none;">
+            <div class="card-title"><i class="fa fa-warning"></i>异常行为预警</div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-road text-3xl text-warning mb-2"></i>
+                <div class="text-2xl font-bold">18</div>
+                <div class="text-sm text-gray-400">偏离路线</div>
+              </div>
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-clock-o text-3xl text-warning mb-2"></i>
+                <div class="text-2xl font-bold">15</div>
+                <div class="text-sm text-gray-400">超时停留</div>
+              </div>
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-map-signs text-3xl text-warning mb-2"></i>
+                <div class="text-2xl font-bold">12</div>
+                <div class="text-sm text-gray-400">异常区域</div>
+              </div>
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-random text-3xl text-warning mb-2"></i>
+                <div class="text-2xl font-bold">8</div>
+                <div class="text-sm text-gray-400">轨迹异常</div>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <h3 class="text-lg font-semibold mb-4 text-accent">异常行为类型分布</h3>
+                <div class="chart-container" id="abnormal-type-chart"></div>
+              </div>
+              
+              <div>
+                <h3 class="text-lg font-semibold mb-4 text-accent">异常行为趋势</h3>
+                <div class="chart-container" id="abnormal-trend-chart"></div>
+              </div>
+            </div>
+            
+            <div class="mt-6">
+              <h3 class="text-lg font-semibold mb-4 text-accent">异常行为列表</h3>
+              <div class="overflow-x-auto">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>异常编号</th>
+                      <th>车牌号</th>
+                      <th>所属企业</th>
+                      <th>异常类型</th>
+                      <th>发生时间</th>
+                      <th>位置</th>
+                      <th>风险等级</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>AB-20250225-001</td>
+                      <td>赣A·12345</td>
+                      <td>通达物流有限公司</td>
+                      <td>偏离路线</td>
+                      <td>2025-02-25 11:30</td>
+                      <td>紫阳大道K12+500</td>
+                      <td><span class="status-badge status-warning">中等</span></td>
+                      <td><button class="text-accent hover:underline">查看</button></td>
+                    </tr>
+                    <tr>
+                      <td>AB-20250225-002</td>
+                      <td>赣A·56789</td>
+                      <td>快捷物流股份公司</td>
+                      <td>超时停留</td>
+                      <td>2025-02-25 10:45</td>
+                      <td>八一大道K5+200</td>
+                      <td><span class="status-badge status-warning">中等</span></td>
+                      <td><button class="text-accent hover:underline">查看</button></td>
+                    </tr>
+                    <tr>
+                      <td>AB-20250225-003</td>
+                      <td>赣A·24680</td>
+                      <td>恒信建筑工程公司</td>
+                      <td>异常区域</td>
+                      <td>2025-02-25 10:20</td>
+                      <td>丰和大道K6+200</td>
+                      <td><span class="status-badge status-danger">高风险</span></td>
+                      <td><button class="text-accent hover:underline">查看</button></td>
+                    </tr>
+                    <tr>
+                      <td>AB-20250225-004</td>
+                      <td>赣A·13579</td>
+                      <td>南方建筑工程局</td>
+                      <td>轨迹异常</td>
+                      <td>2025-02-25 09:55</td>
+                      <td>昌东大道K8+300</td>
+                      <td><span class="status-badge status-danger">高风险</span></td>
+                      <td><button class="text-accent hover:underline">查看</button></td>
+                    </tr>
+                    <tr>
+                      <td>AB-20250225-005</td>
+                      <td>赣A·97531</td>
+                      <td>东方制造集团</td>
+                      <td>偏离路线</td>
+                      <td>2025-02-25 09:20</td>
+                      <td>阳明路K4+100</td>
+                      <td><span class="status-badge status-normal">低风险</span></td>
+                      <td><button class="text-accent hover:underline">查看</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card mt-6" id="score-module" style="display: none;">
+            <div class="card-title"><i class="fa fa-star"></i>积分管控</div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-star text-3xl text-success mb-2"></i>
+                <div class="text-2xl font-bold">2,156</div>
+                <div class="text-sm text-gray-400">优秀车辆</div>
+              </div>
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-star-half-o text-3xl text-accent mb-2"></i>
+                <div class="text-2xl font-bold">845</div>
+                <div class="text-sm text-gray-400">良好车辆</div>
+              </div>
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-star-o text-3xl text-warning mb-2"></i>
+                <div class="text-2xl font-bold">198</div>
+                <div class="text-sm text-gray-400">一般车辆</div>
+              </div>
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-times text-3xl text-danger mb-2"></i>
+                <div class="text-2xl font-bold">57</div>
+                <div class="text-sm text-gray-400">不合格车辆</div>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <h3 class="text-lg font-semibold mb-4 text-accent">积分等级分布</h3>
+                <div class="chart-container" id="score-level-chart"></div>
+              </div>
+              
+              <div>
+                <h3 class="text-lg font-semibold mb-4 text-accent">扣分原因统计</h3>
+                <div class="chart-container" id="deduction-chart"></div>
+              </div>
+            </div>
+            
+            <div class="mt-6">
+              <h3 class="text-lg font-semibold mb-4 text-accent">车辆积分排名</h3>
+              <div class="overflow-x-auto">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>排名</th>
+                      <th>车牌号</th>
+                      <th>所属企业</th>
+                      <th>积分</th>
+                      <th>等级</th>
+                      <th>扣分次数</th>
+                      <th>最后扣分时间</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="text-success font-bold">1</td>
+                      <td>赣A·88888</td>
+                      <td>华泰制造有限公司</td>
+                      <td class="text-success font-bold">100</td>
+                      <td><span class="status-badge status-success">优秀</span></td>
+                      <td>0</td>
+                      <td>-</td>
+                      <td><button class="text-accent hover:underline">详情</button></td>
+                    </tr>
+                    <tr>
+                      <td class="text-success font-bold">2</td>
+                      <td>赣A·66666</td>
+                      <td>顺丰速运有限公司</td>
+                      <td class="text-success font-bold">98</td>
+                      <td><span class="status-badge status-success">优秀</span></td>
+                      <td>1</td>
+                      <td>2025-02-20</td>
+                      <td><button class="text-accent hover:underline">详情</button></td>
+                    </tr>
+                    <tr>
+                      <td class="text-success font-bold">3</td>
+                      <td>赣A·55555</td>
+                      <td>安捷运输有限公司</td>
+                      <td class="text-success font-bold">95</td>
+                      <td><span class="status-badge status-success">优秀</span></td>
+                      <td>2</td>
+                      <td>2025-02-18</td>
+                      <td><button class="text-accent hover:underline">详情</button></td>
+                    </tr>
+                    <tr>
+                      <td class="text-danger font-bold">1</td>
+                      <td>赣A·12345</td>
+                      <td>通达物流有限公司</td>
+                      <td class="text-danger font-bold">45</td>
+                      <td><span class="status-badge status-danger">不合格</span></td>
+                      <td>15</td>
+                      <td>2025-02-25</td>
+                      <td><button class="text-accent hover:underline">详情</button></td>
+                    </tr>
+                    <tr>
+                      <td class="text-danger font-bold">2</td>
+                      <td>赣A·56789</td>
+                      <td>快捷物流股份公司</td>
+                      <td class="text-danger font-bold">52</td>
+                      <td><span class="status-badge status-danger">不合格</span></td>
+                      <td>12</td>
+                      <td>2025-02-24</td>
+                      <td><button class="text-accent hover:underline">详情</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card mt-6" id="pattern-module" style="display: none;">
+            <div class="card-title"><i class="fa fa-line-chart"></i>轨迹规律挖掘</div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-road text-3xl text-accent mb-2"></i>
+                <div class="text-2xl font-bold">1,256</div>
+                <div class="text-sm text-gray-400">常跑路线</div>
+              </div>
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-clock-o text-3xl text-accent mb-2"></i>
+                <div class="text-2xl font-bold">856</div>
+                <div class="text-sm text-gray-400">常跑时段</div>
+              </div>
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-map-pin text-3xl text-accent mb-2"></i>
+                <div class="text-2xl font-bold">456</div>
+                <div class="text-sm text-gray-400">常停区域</div>
+              </div>
+              <div class="bg-primary/60 rounded-lg p-4 text-center border border-gray-700">
+                <i class="fa fa-exchange text-3xl text-accent mb-2"></i>
+                <div class="text-2xl font-bold">328</div>
+                <div class="text-sm text-gray-400">异常轨迹</div>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <h3 class="text-lg font-semibold mb-4 text-accent">常跑路线分布</h3>
+                <div class="chart-container" id="route-chart"></div>
+              </div>
+              
+              <div>
+                <h3 class="text-lg font-semibold mb-4 text-accent">常跑时段分布</h3>
+                <div class="chart-container" id="time-chart"></div>
+              </div>
+            </div>
+            
+            <div class="mt-6">
+              <h3 class="text-lg font-semibold mb-4 text-accent">轨迹规律分析结果</h3>
+              <div class="overflow-x-auto">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>车辆编号</th>
+                      <th>车牌号</th>
+                      <th>所属企业</th>
+                      <th>常跑路线</th>
+                      <th>常跑时段</th>
+                      <th>常停区域</th>
+                      <th>异常次数</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>V-001</td>
+                      <td>赣A·88888</td>
+                      <td>华泰制造有限公司</td>
+                      <td>紫阳大道-丰和大道</td>
+                      <td>06:00-08:00</td>
+                      <td>高新区物流园</td>
+                      <td class="text-success">0</td>
+                      <td><button class="text-accent hover:underline">详情</button></td>
+                    </tr>
+                    <tr>
+                      <td>V-002</td>
+                      <td>赣A·66666</td>
+                      <td>顺丰速运有限公司</td>
+                      <td>八一大道-昌东大道</td>
+                      <td>08:00-10:00</td>
+                      <td>红谷滩物流中心</td>
+                      <td class="text-success">1</td>
+                      <td><button class="text-accent hover:underline">详情</button></td>
+                    </tr>
+                    <tr>
+                      <td>V-003</td>
+                      <td>赣A·55555</td>
+                      <td>安捷运输有限公司</td>
+                      <td>阳明路-丰和大道</td>
+                      <td>10:00-12:00</td>
+                      <td>经开区仓储区</td>
+                      <td class="text-success">2</td>
+                      <td><button class="text-accent hover:underline">详情</button></td>
+                    </tr>
+                    <tr>
+                      <td>V-004</td>
+                      <td>赣A·12345</td>
+                      <td>通达物流有限公司</td>
+                      <td>紫阳大道-昌东大道</td>
+                      <td>14:00-16:00</td>
+                      <td>高新区物流园</td>
+                      <td class="text-danger">15</td>
+                      <td><button class="text-accent hover:underline">详情</button></td>
+                    </tr>
+                    <tr>
+                      <td>V-005</td>
+                      <td>赣A·56789</td>
+                      <td>快捷物流股份公司</td>
+                      <td>八一大道-丰和大道</td>
+                      <td>16:00-18:00</td>
+                      <td>红谷滩物流中心</td>
+                      <td class="text-danger">12</td>
+                      <td><button class="text-accent hover:underline">详情</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    let map;
+    let charts = {};
+    
+    function initMap() {
+      map = L.map('map').setView([28.6823, 115.9096], 12);
+      
+      L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+        subdomains: ['1', '2', '3', '4'],
+        attribution: '© 高德地图',
+        maxZoom: 18,
+        minZoom: 5
+      }).addTo(map);
+      
+      const vehicles = [
+        { lat: 28.6823, lng: 115.8896, plate: '赣A·12345', status: 'online' },
+        { lat: 28.6723, lng: 115.8996, plate: '赣A·56789', status: 'online' },
+        { lat: 28.6923, lng: 115.9096, plate: '赣A·24680', status: 'online' },
+        { lat: 28.6623, lng: 115.9196, plate: '赣A·13579', status: 'warning' },
+        { lat: 28.7023, lng: 115.9296, plate: '赣A·97531', status: 'online' },
+        { lat: 28.6523, lng: 115.8796, plate: '赣A·88888', status: 'online' },
+        { lat: 28.6423, lng: 115.8696, plate: '赣A·66666', status: 'online' },
+        { lat: 28.7123, lng: 115.9396, plate: '赣A·55555', status: 'online' },
+        { lat: 28.7223, lng: 115.9496, plate: '赣A·44444', status: 'offline' },
+        { lat: 28.7323, lng: 115.9596, plate: '赣A·33333', status: 'offline' },
+        { lat: 28.6823, lng: 115.8696, plate: '赣A·22222', status: 'online' },
+        { lat: 28.6923, lng: 115.8596, plate: '赣A·11111', status: 'warning' }
+      ];
+      
+      vehicles.forEach(vehicle => {
+        const color = vehicle.status === 'online' ? '#00B42A' : vehicle.status === 'warning' ? '#FF7D00' : '#999999';
+        const icon = L.divIcon({
+          html: `<div style="width: 24px; height: 24px; background: ${color}; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px ${color}; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: white;">🚛</div>`,
+          className: '',
+          iconSize: [24, 24]
+        });
+        L.marker([vehicle.lat, vehicle.lng], { icon })
+          .bindPopup(`<b>${vehicle.plate}</b><br>状态: ${vehicle.status === 'online' ? '在线' : vehicle.status === 'warning' ? '预警中' : '离线'}`)
+          .addTo(map);
+      });
+    }
+    
+    function initVehicleStatusChart() {
+      const chart = echarts.init(document.getElementById('vehicle-status-chart'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'item' },
+        series: [{
+          type: 'pie',
+          radius: ['40%', '70%'],
+          data: [
+            { value: 2847, name: '在线' },
+            { value: 409, name: '离线' }
+          ],
+          label: {
+            show: true,
+            color: '#e0f2ff',
+            formatter: '{b}: {c}辆'
+          },
+          itemStyle: {
+            borderRadius: 8,
+            borderColor: '#1F4B7C',
+            borderWidth: 1,
+            shadowBlur: 15,
+            shadowColor: 'rgba(42, 200, 255, 0.4)'
+          },
+          color: ['#2AC8FF', '#66CCFF'],
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 25,
+              shadowColor: 'rgba(42, 200, 255, 0.8)',
+              scale: 1.1
+            }
+          }
+        }]
+      });
+      charts['vehicle-status'] = chart;
+    }
+    
+    function initVehicleTypeChart() {
+      const chart = echarts.init(document.getElementById('vehicle-type-chart'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'item' },
+        series: [{
+          type: 'pie',
+          radius: ['40%', '70%'],
+          data: [
+            { value: 1456, name: '货车' },
+            { value: 856, name: '客车' },
+            { value: 568, name: '危化品车' },
+            { value: 376, name: '其他' }
+          ],
+          label: {
+            show: true,
+            color: '#e0f2ff',
+            formatter: '{b}: {c}辆'
+          },
+          itemStyle: {
+            borderRadius: 8,
+            borderColor: '#1F4B7C',
+            borderWidth: 1,
+            shadowBlur: 15,
+            shadowColor: 'rgba(42, 200, 255, 0.4)'
+          },
+          color: ['#2AC8FF', '#66CCFF', '#99DDFF', '#CCEDFF', '#00B42A'],
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 25,
+              shadowColor: 'rgba(42, 200, 255, 0.8)',
+              scale: 1.1
+            }
+          }
+        }]
+      });
+      charts['vehicle-type'] = chart;
+    }
+    
+    function initWarningTypeChart() {
+      const chart = echarts.init(document.getElementById('warning-type-chart'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'item' },
+        series: [{
+          type: 'pie',
+          radius: ['40%', '70%'],
+          data: [
+            { value: 45, name: '超速' },
+            { value: 32, name: '闯红灯' },
+            { value: 28, name: '疲劳驾驶' },
+            { value: 22, name: '事故' }
+          ],
+          label: {
+            show: true,
+            color: '#e0f2ff',
+            formatter: '{b}: {c}次'
+          },
+          itemStyle: {
+            borderRadius: 8,
+            borderColor: '#1F4B7C',
+            borderWidth: 1,
+            shadowBlur: 15,
+            shadowColor: 'rgba(42, 200, 255, 0.4)'
+          },
+          color: ['#2AC8FF', '#66CCFF', '#99DDFF', '#CCEDFF'],
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 25,
+              shadowColor: 'rgba(42, 200, 255, 0.8)',
+              scale: 1.1
+            }
+          }
+        }]
+      });
+      charts['warning-type'] = chart;
+    }
+    
+    function initWarningTimeChart() {
+      const chart = echarts.init(document.getElementById('warning-time-chart'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis' },
+        xAxis: {
+          type: 'category',
+          data: ['0-4', '4-8', '8-12', '12-16', '16-20', '20-24'],
+          axisLabel: { color: '#e0f2ff' },
+          axisLine: { lineStyle: { color: '#1F4B7C' } }
+        },
+        yAxis: {
+          type: 'value',
+          axisLabel: { color: '#e0f2ff' },
+          splitLine: { lineStyle: { color: '#1F4B7C' } }
+        },
+        series: [{
+          type: 'line',
+          data: [12, 25, 38, 32, 45, 28],
+          lineStyle: { color: '#FF7D00', width: 3 },
+          itemStyle: { color: '#FF7D00' },
+          areaStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: 'rgba(255, 125, 0, 0.3)' },
+              { offset: 1, color: 'rgba(255, 125, 0, 0.05)' }
+            ])
+          }
+        }]
+      });
+      charts['warning-time'] = chart;
+    }
+    
+    function initAbnormalTypeChart() {
+      const chart = echarts.init(document.getElementById('abnormal-type-chart'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'item' },
+        series: [{
+          type: 'pie',
+          radius: ['40%', '70%'],
+          data: [
+            { value: 18, name: '偏离路线', itemStyle: { color: '#FF9500' } },
+            { value: 15, name: '超时停留', itemStyle: { color: '#FF7D00' } },
+            { value: 12, name: '异常区域', itemStyle: { color: '#F53F3F' } },
+            { value: 8, name: '轨迹异常', itemStyle: { color: '#0FC6C2' } }
+          ],
+          label: {
+            show: true,
+            color: '#e0f2ff',
+            formatter: '{b}: {c}次'
+          }
+        }]
+      });
+      charts['abnormal-type'] = chart;
+    }
+    
+    function initAbnormalTrendChart() {
+      const chart = echarts.init(document.getElementById('abnormal-trend-chart'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis' },
+        xAxis: {
+          type: 'category',
+          data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+          axisLabel: { color: '#e0f2ff' },
+          axisLine: { lineStyle: { color: '#1F4B7C' } }
+        },
+        yAxis: {
+          type: 'value',
+          axisLabel: { color: '#e0f2ff' },
+          splitLine: { lineStyle: { color: '#1F4B7C' } }
+        },
+        series: [{
+          type: 'line',
+          data: [25, 32, 28, 35, 42, 38, 45],
+          lineStyle: { color: '#FF7D00', width: 3 },
+          itemStyle: { color: '#FF7D00' },
+          areaStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: 'rgba(255, 125, 0, 0.3)' },
+              { offset: 1, color: 'rgba(255, 125, 0, 0.05)' }
+            ])
+          }
+        }]
+      });
+      charts['abnormal-trend'] = chart;
+    }
+    
+    function initScoreLevelChart() {
+      const chart = echarts.init(document.getElementById('score-level-chart'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'item' },
+        series: [{
+          type: 'pie',
+          radius: ['40%', '70%'],
+          data: [
+            { value: 2156, name: '优秀', itemStyle: { color: '#00B42A' } },
+            { value: 845, name: '良好', itemStyle: { color: '#2AC8FF' } },
+            { value: 198, name: '一般', itemStyle: { color: '#FF7D00' } },
+            { value: 57, name: '不合格', itemStyle: { color: '#F53F3F' } }
+          ],
+          label: {
+            show: true,
+            color: '#e0f2ff',
+            formatter: '{b}: {c}辆'
+          }
+        }]
+      });
+      charts['score-level'] = chart;
+    }
+    
+    function initDeductionChart() {
+      const chart = echarts.init(document.getElementById('deduction-chart'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis' },
+        xAxis: {
+          type: 'category',
+          data: ['超速', '闯红灯', '疲劳驾驶', '偏离路线', '其他'],
+          axisLabel: { color: '#e0f2ff', fontSize: 11 },
+          axisLine: { lineStyle: { color: '#1F4B7C' } }
+        },
+        yAxis: {
+          type: 'value',
+          axisLabel: { color: '#e0f2ff' },
+          splitLine: { lineStyle: { color: '#1F4B7C' } }
+        },
+        series: [{
+          type: 'bar',
+          data: [156, 128, 98, 76, 52],
+          itemStyle: {
+            borderRadius: [8, 8, 0, 0],
+            color: '#FF7D00'
+          },
+          barWidth: '50%'
+        }]
+      });
+      charts['deduction'] = chart;
+    }
+    
+    function initRouteChart() {
+      const chart = echarts.init(document.getElementById('route-chart'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis' },
+        xAxis: {
+          type: 'category',
+          data: ['紫阳大道', '八一大道', '丰和大道', '昌东大道', '阳明路'],
+          axisLabel: { color: '#e0f2ff', fontSize: 11 },
+          axisLine: { lineStyle: { color: '#1F4B7C' } }
+        },
+        yAxis: {
+          type: 'value',
+          axisLabel: { color: '#e0f2ff' },
+          splitLine: { lineStyle: { color: '#1F4B7C' } }
+        },
+        series: [{
+          type: 'bar',
+          data: [356, 289, 245, 198, 168],
+          itemStyle: {
+            borderRadius: [8, 8, 0, 0],
+            color: '#2AC8FF'
+          },
+          barWidth: '50%'
+        }]
+      });
+      charts['route'] = chart;
+    }
+    
+    function initTimeChart() {
+      const chart = echarts.init(document.getElementById('time-chart'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis' },
+        xAxis: {
+          type: 'category',
+          data: ['6-8', '8-10', '10-12', '12-14', '14-16', '16-18', '18-20', '20-22'],
+          axisLabel: { color: '#e0f2ff', fontSize: 10 },
+          axisLine: { lineStyle: { color: '#1F4B7C' } }
+        },
+        yAxis: {
+          type: 'value',
+          axisLabel: { color: '#e0f2ff' },
+          splitLine: { lineStyle: { color: '#1F4B7C' } }
+        },
+        series: [{
+          type: 'line',
+          data: [156, 245, 198, 128, 145, 189, 165, 132],
+          lineStyle: { color: '#2AC8FF', width: 3 },
+          itemStyle: { color: '#2AC8FF' },
+          areaStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: 'rgba(42, 200, 255, 0.3)' },
+              { offset: 1, color: 'rgba(42, 200, 255, 0.05)' }
+            ])
+          }
+        }]
+      });
+      charts['time'] = chart;
+    }
+    
+    function switchModule(moduleId) {
+      try {
+        showLoading();
+        
+        const moduleNames = {
+          'trajectory': '轨迹接入与管理',
+          'warning': '事故违法预警',
+          'abnormal': '异常行为预警',
+          'score': '积分管控',
+          'pattern': '轨迹规律挖掘'
+        };
+        
+        const modules = ['trajectory', 'warning', 'abnormal', 'score', 'pattern'];
+        modules.forEach(m => {
+          const module = document.getElementById(m + '-module');
+          if (module) {
+            module.style.display = (m === moduleId) ? 'block' : 'none';
+          }
+        });
+        
+        const btns = document.querySelectorAll('.module-btn');
+        btns.forEach(btn => {
+          btn.classList.remove('active');
+          if (btn.dataset.module === moduleId) {
+            btn.classList.add('active');
+          }
+        });
+        
+        setTimeout(() => {
+          Object.values(charts).forEach(chart => chart.resize());
+          if (map) map.invalidateSize();
+          hideLoading();
+          showToast('success', '模块切换成功', `已切换至：${moduleNames[moduleId]}`);
+        }, 300);
+        
+      } catch (error) {
+        hideLoading();
+        showToast('error', '模块切换失败', '切换模块时发生错误，请重试');
+        console.error('Module switch error:', error);
+      }
+    }
+    
+    function showToast(type, title, message, duration = 3000) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      
+      const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-times-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+      };
+      
+      toast.innerHTML = `
+        <i class="fa ${icons[type]} toast-icon"></i>
+        <div class="toast-content">
+          <div class="toast-title">${title}</div>
+          <div class="toast-message">${message}</div>
+        </div>
+        <i class="fa fa-times toast-close"></i>
+      `;
+      
+      container.appendChild(toast);
+      
+      const closeBtn = toast.querySelector('.toast-close');
+      closeBtn.addEventListener('click', () => {
+        removeToast(toast);
+      });
+      
+      if (duration > 0) {
+        setTimeout(() => {
+          removeToast(toast);
+        }, duration);
+      }
+      
+      return toast;
+    }
+    
+    function removeToast(toast) {
+      toast.style.animation = 'slideOut 0.3s ease-out';
+      setTimeout(() => {
+        if (toast.parentElement) {
+          toast.parentElement.removeChild(toast);
+        }
+      }, 300);
+    }
+    
+    function showLoading() {
+      document.getElementById('loading-overlay').classList.add('active');
+    }
+    
+    function hideLoading() {
+      document.getElementById('loading-overlay').classList.remove('active');
+    }
+    
+    function createRipple(event) {
+      const button = event.currentTarget;
+      const circle = document.createElement('span');
+      const diameter = Math.max(button.clientWidth, button.clientHeight);
+      const radius = diameter / 2;
+      
+      circle.style.width = circle.style.height = `${diameter}px`;
+      circle.style.left = `${event.clientX - button.getBoundingClientRect().left - radius}px`;
+      circle.style.top = `${event.clientY - button.getBoundingClientRect().top - radius}px`;
+      circle.classList.add('ripple');
+      
+      const ripple = button.getElementsByClassName('ripple')[0];
+      if (ripple) {
+        ripple.remove();
+      }
+      
+      button.appendChild(circle);
+    }
+    
+    function addRippleEffect() {
+      const buttons = document.querySelectorAll('.module-btn, .back-button');
+      buttons.forEach(button => {
+        button.addEventListener('click', createRipple);
+      });
+    }
+    
+    function setupTableInteractions() {
+      const tableRows = document.querySelectorAll('.data-table tbody tr');
+      tableRows.forEach(row => {
+        row.addEventListener('click', function() {
+          const cells = this.querySelectorAll('td');
+          if (cells.length > 0) {
+            const id = cells[0].textContent;
+            showToast('info', '查看详情', `正在加载编号：${id} 的详细信息...`);
+          }
+        });
+      });
+    }
+    
+    function setupCardInteractions() {
+      const cards = document.querySelectorAll('.card');
+      cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+          this.style.transform = 'translateY(-2px)';
+        });
+        card.addEventListener('mouseleave', function() {
+          this.style.transform = 'translateY(0)';
+        });
+      });
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      initMap();
+      initVehicleStatusChart();
+      initVehicleTypeChart();
+      initWarningTypeChart();
+      initWarningTimeChart();
+      initAbnormalTypeChart();
+      initAbnormalTrendChart();
+      initScoreLevelChart();
+      initDeductionChart();
+      initRouteChart();
+      initTimeChart();
+      
+      document.querySelectorAll('.module-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          switchModule(btn.dataset.module);
+        });
+      });
+      
+      addRippleEffect();
+      setupTableInteractions();
+      setupCardInteractions();
+      
+      showToast('success', '系统加载完成', '欢迎使用重点车辆监管子系统', 2000);
+      
+      window.addEventListener('resize', () => {
+        Object.values(charts).forEach(chart => chart.resize());
+        if (map) map.invalidateSize();
+      });
+    });
+  </script>
+</body>
+</html>
