@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧交通 - 道路监管子系统</title>
+    <!-- 引入依赖库 -->
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <style>
+        /* 全局样式：保持原系统深色科技风 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        body {
+            background-color: #051022;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(42, 200, 255, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(42, 200, 255, 0.1) 0%, transparent 20%);
+            background-size: 100% 100%;
+            color: #fff;
+            min-height: 100vh;
+        }
+        /* 顶部标题栏：渐变+发光效果 */
+        .header {
+            height: 80px;
+            background: linear-gradient(90deg, #081a36, #103760, #081a36);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 0 15px rgba(42, 200, 255, 0.3);
+        }
+        .header h1 {
+            font-size: 24px;
+            color: #2AC8FF;
+            text-shadow: 0 0 8px rgba(42, 200, 255, 0.8);
+            letter-spacing: 2px;
+        }
+        /* 主体布局：Grid分栏（左侧+中间+右侧）- 调整为三栏布局 */
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr 1fr;
+            grid-gap: 16px;
+            padding: 16px;
+            height: calc(100vh - 80px);
+        }
+        /* 面板卡片通用样式：科技感边框+发光动画 */
+        .panel {
+            background-color: rgba(8, 26, 54, 0.8);
+            border: 1px solid rgba(42, 200, 255, 0.3);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 0 10px rgba(42, 200, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        .panel::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, #2AC8FF, #0066CC, #2AC8FF);
+            animation: glow 3s infinite alternate;
+        }
+        @keyframes glow {
+            from { box-shadow: 0 0 5px rgba(42, 200, 255, 0.5); }
+            to { box-shadow: 0 0 15px rgba(42, 200, 255, 0.8); }
+        }
+        
+        /* 脉动动画 - 用于地图标记点 */
+        @keyframes pulse {
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.9;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.3);
+                opacity: 0.7;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.9;
+            }
+        }
+        
+        /* 虚线流动动画 - 用于危险道路标记 */
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -10;
+            }
+        }
+        .panel-title {
+            font-size: 16px;
+            color: #2AC8FF;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+        }
+        .panel-title i {
+            margin-right: 8px;
+            font-size: 18px;
+        }
+        /* 左侧面板：统计卡片 */
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+        }
+        .chart-container {
+            width: 100%;
+            height: 220px;
+            margin-bottom: 8px;
+        }
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px dashed rgba(42, 200, 255, 0.2);
+        }
+        .stat-label {
+            color: #B0C4DE;
+            font-size: 14px;
+        }
+        .stat-value {
+            color: #fff;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .stat-value.warning { color: #FF9800; }
+        .stat-value.danger { color: #F44336; }
+        .stat-value.success { color: #4CAF50; }
+        /* 中间核心区：地图+图层控制 */
+        .middle-panel {
+            display: flex;
+            flex-direction: column;
+            grid-column: 2;
+        }
+        /* 地图容器：模拟GIS地图区域 */
+        .map-container {
+            flex: 1;
+            background-color: rgba(3, 10, 20, 0.9);
+            border: 1px solid rgba(42, 200, 255, 0.3);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        .map-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #B0C4DE;
+            font-size: 14px;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%232AC8FF' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+        }
+        /* 地图图层控制栏 */
+        .map-controls {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 10;
+        }
+        .layer-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 4px;
+            background-color: rgba(8, 26, 54, 0.9);
+            border: 1px solid rgba(42, 200, 255, 0.5);
+            color: #B0C4DE;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .layer-btn:hover, .layer-btn.active {
+            background-color: rgba(42, 200, 255, 0.2);
+            color: #2AC8FF;
+            transform: scale(1.05);
+            box-shadow: 0 0 8px rgba(42, 200, 255, 0.5);
+        }
+        /* 右侧面板：安全指数+告警列表+操作区 */
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+        }
+        /* 告警列表表格 */
+        .alarm-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .alarm-table th {
+            color: #2AC8FF;
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid rgba(42, 200, 255, 0.3);
+        }
+        .alarm-table td {
+            color: #B0C4DE;
+            padding: 8px;
+            border-bottom: 1px dashed rgba(42, 200, 255, 0.1);
+        }
+        .alarm-table tr:hover td {
+            color: #fff;
+            background-color: rgba(42, 200, 255, 0.1);
+        }
+        /* 操作按钮 */
+        .op-btn {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(42, 200, 255, 0.5);
+            background-color: rgba(8, 26, 54, 0.8);
+            color: #2AC8FF;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .op-btn:hover {
+            background-color: rgba(42, 200, 255, 0.2);
+            box-shadow: 0 0 8px rgba(42, 200, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部标题栏 -->
+    <div class="header">
+        <h1><i class="fa fa-road"></i>智慧交通 - 道路监管子系统</h1>
+    </div>
+
+    <!-- 主体容器：左侧+中间+右侧 -->
+        <div class="main-container">
+            <!-- 左侧面板：核心统计卡片 -->
+            <div class="left-panel">
+                <!-- 1. 道路基础设施状态统计（对应“道路基础设施监管模块”） -->
+                <div class="panel">
+                    <div class="panel-title"><i class="fa fa-cogs"></i>道路基础设施状态</div>
+                    <div class="chart-container" id="facilityChart"></div>
+                    <div class="stat-item">
+                        <span class="stat-label">信号灯正常率</span>
+                        <span class="stat-value success">92%</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">视频设备在线率</span>
+                        <span class="stat-value success">88%</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">当前故障设施</span>
+                        <span class="stat-value danger">12台</span>
+                    </div>
+                </div>
+                
+                <!-- 2. 交通违法统计 -->
+                <div class="panel">
+                    <div class="panel-title"><i class="fa fa-exclamation-circle"></i>交通违法统计</div>
+                    <div class="chart-container" id="violationChart"></div>
+                    <div class="stat-item">
+                        <span class="stat-label">今日违法数（同比）</span>
+                        <span class="stat-value warning">156 (-8%)</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">主要违法类型</span>
+                        <span class="stat-value warning">超速、闯红灯</span>
+                    </div>
+                </div>
+                
+                <!-- 3. 道路交通事故统计 -->
+                <div class="panel">
+                    <div class="panel-title"><i class="fa fa-ambulance"></i>道路交通事故统计</div>
+                    <div class="chart-container" id="accidentChart"></div>
+                    <div class="stat-item">
+                        <span class="stat-label">今日事故数（环比）</span>
+                        <span class="stat-value danger">23 (+5%)</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">事故处理率</span>
+                        <span class="stat-value success">78%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中间核心区：百度地图 -->
+            <div class="middle-panel">
+                <div class="map-container">
+                    <!-- 百度地图iframe -->
+                    <iframe src="https://map.baidu.com/search/%E5%8D%97%E6%98%8C%E5%B8%82/@12898127,3315480,12z?querytype=s&wd=%E6%B1%9F%E8%A5%BF%E5%8D%97%E6%98%8C&c=349&pn=0&device_ratio=2&da_src=shareurl" 
+                            width="100%" height="100%" style="border: none;"></iframe>
+                </div>
+            </div>
+
+            <!-- 右侧面板：安全指数+告警列表+操作区 -->
+            <div class="right-panel">
+
+            <!-- 3. 拥堵与黑点预警 -->
+            <div class="panel">
+                <div class="panel-title"><i class="fa fa-traffic-light"></i>拥堵与黑点预警</div>
+                <div class="stat-item">
+                    <span class="stat-label">当前拥堵路段</span>
+                    <span class="stat-value warning">8条</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">高风险黑点路段</span>
+                    <span class="stat-value danger">5条</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">拥堵预警级别</span>
+                    <span class="stat-value warning">黄色</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">黑点治理完成率</span>
+                    <span class="stat-value success">68%</span>
+                </div>
+            </div>
+
+            <!-- 4. 危险道路安全指数排行 -->
+            <div class="panel">
+                <div class="panel-title"><i class="fa fa-bar-chart"></i>危险道路安全指数排行</div>
+                <div class="chart-container" id="dangerRoadChart"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入ECharts库 -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js" defer></script>
+    
+    <!-- 脚本：初始化图表+交互逻辑 -->
+    <script>
+        // 等待DOM加载完成且ECharts库可用后初始化图表
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof echarts !== 'undefined') {
+                // 初始化ECharts实例（保持与原系统一致的图表风格）
+                const initChart = (domId, option) => {
+                    const chart = echarts.init(document.getElementById(domId));
+                    chart.setOption({
+                        ...option,
+                        backgroundColor: 'transparent',
+                        textStyle: { color: '#B0C4DE' },
+                        legend: { textStyle: { color: '#B0C4DE' } },
+                        tooltip: {
+                            backgroundColor: 'rgba(8, 26, 54, 0.9)',
+                            borderColor: 'rgba(42, 200, 255, 0.5)',
+                            textStyle: { color: '#fff' }
+                        }
+                    });
+                    // 窗口resize适配
+                    window.addEventListener('resize', () => chart.resize());
+                    return chart;
+                };
+
+        // 1. 道路基础设施状态图表（饼图）
+        initChart('facilityChart', {
+            tooltip: {
+                trigger: 'item',
+                formatter: '{a} <br/>{b}: {c} ({d}%)'
+            },
+            legend: {
+                orient: 'vertical',
+                right: 10,
+                top: 'center',
+                itemWidth: 10,
+                itemHeight: 10,
+                textStyle: {
+                    color: '#B0C4DE',
+                    fontSize: 12
+                }
+            },
+            series: [{
+                name: '基础设施状态',
+                type: 'pie',
+                radius: ['60%', '80%'],
+                center: ['35%', '50%'],
+                avoidLabelOverlap: false,
+                itemStyle: {
+                    borderRadius: 4,
+                    borderColor: '#081a36',
+                    borderWidth: 2
+                },
+                data: [
+                    { value: 288, name: '正常（信号灯）', itemStyle: { color: '#4CAF50' } },
+                    { value: 24, name: '故障（信号灯）', itemStyle: { color: '#F44336' } },
+                    { value: 352, name: '在线（视频设备）', itemStyle: { color: '#4FC3F7' } },
+                    { value: 48, name: '离线（视频设备）', itemStyle: { color: '#9C27B0' } }
+                ],
+                emphasis: {
+                    itemStyle: {
+                        shadowBlur: 10,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                },
+                label: { show: false },
+                labelLine: { show: false }
+            }]
+        });
+
+        // 2. 交通违法统计图表（柱状图）
+        initChart('violationChart', {
+            grid: { left: '5%', right: '5%', bottom: '10%', top: '10%' },
+            xAxis: {
+                type: 'category',
+                data: ['0-6', '6-12', '12-18', '18-24'],
+                axisLine: { lineStyle: { color: 'rgba(42, 200, 255, 0.3)' } }
+            },
+            yAxis: {
+                type: 'value',
+                axisLine: { lineStyle: { color: 'rgba(42, 200, 255, 0.3)' } },
+                splitLine: { lineStyle: { color: 'rgba(42, 200, 255, 0.1)' } }
+            },
+            series: [
+                {
+                    name: '违法数',
+                    type: 'bar',
+                    data: [12, 65, 58, 21],
+                    itemStyle: { color: '#FF9800' },
+                    barWidth: '60%'
+                }
+            ]
+        });
+
+        // 3. 道路交通事故统计图表（柱状图）
+        initChart('accidentChart', {
+            grid: { left: '5%', right: '5%', bottom: '10%', top: '10%' },
+            xAxis: {
+                type: 'category',
+                data: ['0-6', '6-12', '12-18', '18-24'],
+                axisLine: { lineStyle: { color: 'rgba(42, 200, 255, 0.3)' } }
+            },
+            yAxis: {
+                type: 'value',
+                axisLine: { lineStyle: { color: 'rgba(42, 200, 255, 0.3)' } },
+                splitLine: { lineStyle: { color: 'rgba(42, 200, 255, 0.1)' } }
+            },
+            series: [
+                {
+                    name: '事故数',
+                    type: 'bar',
+                    data: [2, 9, 8, 4],
+                    itemStyle: { color: '#F44336' },
+                    barWidth: '60%'
+                }
+            ]
+        });
+
+        // 3. 危险道路安全指数图表（水平柱状图）
+        initChart('dangerRoadChart', {
+            grid: { left: '15%', right: '5%', bottom: '10%', top: '10%' },
+            xAxis: {
+                type: 'value',
+                max: 100,
+                axisLine: { lineStyle: { color: 'rgba(42, 200, 255, 0.3)' } },
+                splitLine: { lineStyle: { color: 'rgba(42, 200, 255, 0.1)' } },
+                name: '安全指数',
+                nameTextStyle: { color: '#2AC8FF' }
+            },
+            yAxis: {
+                type: 'category',
+                data: ['昌东大道', '洪都南大道', '青云谱路', '解放西路', '庐山南大道'],
+                axisLine: { lineStyle: { color: 'rgba(42, 200, 255, 0.3)' } }
+            },
+            series: [{
+                type: 'bar',
+                data: [35, 42, 58, 65, 72],
+                itemStyle: {
+                    color: params => {
+                        const colorList = ['#F44336', '#F44336', '#FF9800', '#FF9800', '#4CAF50'];
+                        return colorList[params.dataIndex];
+                    }
+                },
+                label: {
+                    show: true,
+                    position: 'right',
+                    color: '#fff'
+                },
+                barWidth: '40%'
+            }]
+        });
+
+        // 图层控制按钮交互（显示/隐藏对应地图图层）
+        const layerBtns = document.querySelectorAll('.layer-btn');
+        const cityMap = document.getElementById('city-map');
+        
+        // 初始化地图图层数据结构
+        const layers = {
+            'infrastructure': {
+                visible: true,
+                // 代表基础设施的元素选择器
+                elements: () => Array.from(cityMap.querySelectorAll('g, circle')).filter(el => {
+                    // 筛选出代表基础设施的元素
+                    return el.getAttribute('opacity') === '0.6' || 
+                           el.getAttribute('r') === '8' || 
+                           (el.tagName === 'path' && el.getAttribute('stroke-width') === '2');
+                })
+            },
+            'traffic-law': {
+                visible: true,
+                // 违法标记点样式
+                markerStyle: 'rgba(255, 152, 0, 0.8)',
+                // 模拟违法数据
+                data: [
+                    { x: 300, y: 200, desc: '超速行驶' },
+                    { x: 700, y: 300, desc: '闯红灯' },
+                    { x: 500, y: 500, desc: '违停' }
+                ]
+            },
+            'accident': {
+                visible: true,
+                // 事故标记点样式
+                markerStyle: 'rgba(244, 67, 54, 0.8)',
+                // 模拟事故数据
+                data: [
+                    { x: 350, y: 350, desc: '两车相撞' },
+                    { x: 750, y: 550, desc: '多车追尾' }
+                ]
+            },
+            'congestion': {
+                visible: true,
+                // 拥堵标记点样式
+                markerStyle: 'rgba(249, 115, 22, 0.8)',
+                // 模拟拥堵数据
+                data: [
+                    { x: 550, y: 250, desc: '严重拥堵' },
+                    { x: 450, y: 650, desc: '中度拥堵' }
+                ]
+            },
+            'black-spot': {
+                visible: true,
+                // 黑点标记点样式
+                markerStyle: 'rgba(234, 179, 8, 0.8)',
+                // 模拟黑点数据
+                data: [
+                    { x: 150, y: 450, desc: '事故多发点' },
+                    { x: 850, y: 350, desc: '违法高发点' }
+                ]
+            },
+            'dangerous-road': {
+                visible: true,
+                // 危险道路样式
+                roadStyle: 'rgba(255, 69, 0, 0.6)',
+                // 模拟危险道路数据（用线段表示）
+                data: [
+                    { startX: 300, startY: 300, endX: 400, endY: 400, desc: '易滑路段' },
+                    { startX: 700, startY: 500, endX: 800, endY: 600, desc: '弯道危险' }
+                ]
+            }
+        };
+        
+        // 创建地图事件标记容器
+        const markersContainer = document.querySelector('.map-event-markers');
+        
+        // 更新图层显示状态
+        function updateLayerVisibility(layerId, visible) {
+            const layer = layers[layerId];
+            if (!layer) return;
+            
+            layer.visible = visible;
+            
+            // 根据图层类型处理不同的显示逻辑
+            switch(layerId) {
+                case 'infrastructure':
+                    layer.elements().forEach(el => {
+                        el.style.display = visible ? 'block' : 'none';
+                    });
+                    break;
+                case 'traffic-law':
+                case 'accident':
+                case 'congestion':
+                case 'black-spot':
+                    renderMarkers(layerId);
+                    break;
+                case 'dangerous-road':
+                    renderDangerousRoads();
+                    break;
+            }
+        }
+        
+        // 渲染标记点
+        function renderMarkers(layerId) {
+            const layer = layers[layerId];
+            if (!layer || !layer.visible) return;
+            
+            // 清除现有标记
+            const existingMarkers = document.querySelectorAll(`.marker-${layerId}`);
+            existingMarkers.forEach(marker => marker.remove());
+            
+            if (layer.visible) {
+                layer.data.forEach(point => {
+                    const marker = document.createElement('div');
+                    marker.className = `map-marker marker-${layerId}`;
+                    marker.style.position = 'absolute';
+                    marker.style.left = `${point.x}px`;
+                    marker.style.top = `${point.y}px`;
+                    marker.style.width = '12px';
+                    marker.style.height = '12px';
+                    marker.style.borderRadius = '50%';
+                    marker.style.backgroundColor = layer.markerStyle;
+                    marker.style.transform = 'translate(-50%, -50%)';
+                    marker.style.boxShadow = `0 0 8px ${layer.markerStyle}`;
+                    marker.style.cursor = 'pointer';
+                    marker.title = point.desc;
+                    
+                    // 添加脉动动画效果
+                    marker.style.animation = 'pulse 2s infinite';
+                    
+                    // 添加点击事件，显示详细信息
+                    marker.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        showMarkerInfo(point, marker);
+                    });
+                    
+                    markersContainer.appendChild(marker);
+                });
+            }
+        }
+        
+        // 渲染危险道路
+        function renderDangerousRoads() {
+            const layer = layers['dangerous-road'];
+            if (!layer) return;
+            
+            // 清除现有危险道路标记
+            const existingRoads = document.querySelectorAll('.dangerous-road-path');
+            existingRoads.forEach(road => road.remove());
+            
+            if (layer.visible) {
+                const svg = document.getElementById('city-map');
+                
+                layer.data.forEach(road => {
+                    // 创建SVG路径元素
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', `M${road.startX} ${road.startY} L${road.endX} ${road.endY}`);
+                    path.setAttribute('stroke', layer.roadStyle);
+                    path.setAttribute('stroke-width', '8');
+                    path.setAttribute('stroke-dasharray', '5,5');
+                    path.setAttribute('class', 'dangerous-road-path');
+                    path.setAttribute('title', road.desc);
+                    
+                    // 添加动画效果
+                    path.style.animation = 'dash 3s linear infinite';
+                    
+                    // 添加点击事件
+                    path.addEventListener('click', () => {
+                        alert(`危险道路：${road.desc}`);
+                    });
+                    
+                    svg.appendChild(path);
+                });
+            }
+        }
+        
+        // 显示标记点详细信息
+        function showMarkerInfo(point, marker) {
+            // 清除现有信息窗口
+            const existingInfoWindows = document.querySelectorAll('.info-window');
+            existingInfoWindows.forEach(win => win.remove());
+            
+            // 创建信息窗口
+            const infoWindow = document.createElement('div');
+            infoWindow.className = 'info-window';
+            infoWindow.style.position = 'absolute';
+            infoWindow.style.left = `${parseInt(marker.style.left) + 10}px`;
+            infoWindow.style.top = `${parseInt(marker.style.top) - 30}px`;
+            infoWindow.style.padding = '8px 12px';
+            infoWindow.style.backgroundColor = 'rgba(8, 26, 54, 0.95)';
+            infoWindow.style.border = '1px solid rgba(42, 200, 255, 0.5)';
+            infoWindow.style.borderRadius = '4px';
+            infoWindow.style.color = '#fff';
+            infoWindow.style.fontSize = '12px';
+            infoWindow.style.zIndex = '100';
+            infoWindow.style.maxWidth = '200px';
+            infoWindow.textContent = point.desc;
+            
+            markersContainer.appendChild(infoWindow);
+            
+            // 点击地图其他地方关闭信息窗口
+            setTimeout(() => {
+                document.addEventListener('click', closeInfoWindow);
+            }, 100);
+            
+            function closeInfoWindow() {
+                infoWindow.remove();
+                document.removeEventListener('click', closeInfoWindow);
+            }
+        }
+        
+        // 为所有图层按钮添加事件监听
+        layerBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const layerId = btn.getAttribute('data-layer');
+                btn.classList.toggle('active');
+                const isActive = btn.classList.contains('active');
+                
+                // 更新图层可见性
+                updateLayerVisibility(layerId, isActive);
+                
+                // 显示操作反馈
+                const layerName = btn.getAttribute('title');
+                console.log(`${layerName}图层已${isActive ? '开启' : '关闭'}`);
+            });
+        });
+        
+        // 初始化所有图层
+        function initAllLayers() {
+            // 为所有标记图层渲染标记点
+            ['traffic-law', 'accident', 'congestion', 'black-spot'].forEach(layerId => {
+                if (layers[layerId].visible) {
+                    renderMarkers(layerId);
+                }
+            });
+            
+            // 渲染危险道路
+            if (layers['dangerous-road'].visible) {
+                renderDangerousRoads();
+            }
+        }
+        
+        // 快速操作按钮交互（模拟功能触发）
+        const opBtns = document.querySelectorAll('.op-btn');
+        opBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                alert(`触发操作：${btn.textContent.trim()}（实际项目可替换为弹窗表单或接口调用）`);
+            });
+        });
+        
+            } else {
+                console.log('ECharts库加载失败，无法初始化图表');
+                // 为图表容器添加友好提示
+                document.querySelectorAll('.chart-container').forEach(container => {
+                    container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #88A0B9; font-size: 12px;">图表加载失败</div>';
+                });
+            }
+        });
+    </script>
+</body>
+</html>

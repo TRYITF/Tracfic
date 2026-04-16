@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>智慧交通综合管理系统 - 重点车辆监管</title>
+    <!-- 引入ECharts图表库 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+
+    <!-- 引入Font Awesome图标 -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Microsoft YaHei", sans-serif;
+      }
+      body {
+        background: #051022;
+        color: #e0f2ff;
+        font-family: "Microsoft YaHei", sans-serif;
+        overflow-x: hidden;
+        position: relative;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+      }
+      /* 电路板背景特效 */
+      body::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cpath d='M0 0 L100 0 L100 100 L0 100 Z' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M0 0 L100 100' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Cpath d='M100 0 L0 100' fill='none' stroke='%231a4c7d' stroke-width='0.5'/%3E%3Ccircle cx='25' cy='25' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='75' cy='25' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='25' cy='75' r='1' fill='%232AC8FF'/%3E%3Ccircle cx='75' cy='75' r='1' fill='%232AC8FF'/%3E%3C/svg%3E");
+        background-size: 100px 100px;
+        opacity: 0.15;
+        z-index: -1;
+      }
+      .container {
+        display: grid;
+        grid-template-rows: 60px 1fr;
+        gap: 15px;
+        padding: 15px;
+        height: 100vh;
+      }
+      .header {
+        font-size: 24px;
+        font-weight: bold;
+        text-align: center;
+        line-height: 60px;
+        background: linear-gradient(90deg, #0a2440, #123a63);
+        border-radius: 12px;
+        box-shadow: 0 0 15px rgba(42, 200, 255, 0.3);
+        letter-spacing: 1px;
+      }
+      .main-content {
+        display: grid;
+        grid-template-columns: 60px 1fr;
+        gap: 15px;
+        height: calc(100vh - 80px);
+        transition: grid-template-columns 0.3s ease;
+      }
+      .sidebar {
+        background: linear-gradient(145deg, #0d2540, #15355a);
+        border-radius: 12px;
+        border: 1px solid rgba(42, 200, 255, 0.3);
+        padding: 15px 0;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4),
+          0 0 10px rgba(42, 200, 255, 0.1);
+        width: 60px;
+        overflow: hidden;
+        transition: width 0.3s ease;
+        position: relative;
+        z-index: 10;
+      }
+      .sidebar:hover {
+        width: 240px;
+      }
+      .sidebar:hover ~ .content {
+        transform: translateX(0);
+      }
+      .module-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        align-items: center;
+      }
+      .sidebar:hover .module-menu {
+        align-items: stretch;
+      }
+      .module-item {
+        padding: 12px 15px;
+        background: rgba(31, 75, 124, 0.3);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        border: 1px solid transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+        width: 40px;
+        overflow: hidden;
+      }
+      .sidebar:hover .module-item {
+        width: auto;
+        padding-left: 15px;
+        padding-right: 15px;
+        justify-content: flex-start;
+      }
+      .module-item:hover {
+        background: rgba(42, 200, 255, 0.1);
+        border-color: #2ac8ff;
+      }
+      .module-item.active {
+        background: rgba(42, 200, 255, 0.2);
+        border-color: #2ac8ff;
+        box-shadow: 0 0 10px rgba(42, 200, 255, 0.3);
+      }
+      .module-item i {
+        color: #2ac8ff;
+        margin-right: 0;
+        transition: margin-right 0.3s ease;
+      }
+      .sidebar:hover .module-item i {
+        margin-right: 10px;
+      }
+      .module-item span {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        display: inline-block;
+        width: 0;
+      }
+      .sidebar:hover .module-item span {
+        opacity: 1;
+        width: auto;
+      }
+      .content {
+        display: grid;
+        grid-template-columns: 280px 1fr 320px;
+        grid-template-rows: 1fr;
+        gap: 15px;
+        height: 100%;
+        transition: transform 0.3s ease;
+      }
+      .card {
+        background: linear-gradient(145deg, #0d2540, #15355a);
+        border-radius: 12px;
+        border: 1px solid rgba(42, 200, 255, 0.3);
+        padding: 20px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4),
+          0 0 10px rgba(42, 200, 255, 0.1);
+        position: relative;
+        transition: all 0.3s ease;
+      }
+
+      .card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: linear-gradient(90deg, #2ac8ff, #66ccff, #2ac8ff);
+        animation: glow 3s linear infinite;
+        background-size: 200% auto;
+        box-shadow: 0 0 10px rgba(42, 200, 255, 0.5);
+      }
+
+      .card:hover {
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5),
+          0 0 15px rgba(42, 200, 255, 0.2);
+        transform: translateY(-2px);
+      }
+
+      @keyframes glow {
+        0% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+        100% {
+          background-position: 0% 50%;
+        }
+      }
+
+      .card-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #1f4b7c;
+        display: flex;
+        align-items: center;
+        color: #ffffff;
+      }
+
+      .card-title i {
+        margin-right: 10px;
+        color: #2ac8ff;
+        text-shadow: 0 0 8px rgba(42, 200, 255, 0.8);
+      }
+
+      /* 左侧面板 */
+      .left-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      /* 中央地图区域 */
+      .map-container {
+        position: relative;
+        overflow: hidden;
+        border-radius: 8px;
+        background: rgba(31, 75, 124, 0.1);
+        border: 1px solid #1a4c7d;
+      }
+
+      .map-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      /* 车辆标记 */
+      .vehicle-marker {
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        background: #2ac8ff;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        cursor: pointer;
+        animation: pulse 2s infinite;
+        box-shadow: 0 0 10px rgba(42, 200, 255, 0.8);
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: translate(-50%, -50%) scale(1.2);
+          opacity: 0.8;
+        }
+        100% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 1;
+        }
+      }
+
+      .alert-marker {
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        background: #ff3333;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        cursor: pointer;
+        animation: alert-pulse 1s infinite;
+        box-shadow: 0 0 10px rgba(255, 51, 51, 0.8);
+      }
+
+      @keyframes alert-pulse {
+        0% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: translate(-50%, -50%) scale(1.3);
+          opacity: 0.6;
+        }
+        100% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 1;
+        }
+      }
+
+      /* 实时监控窗口 */
+      .realtime-monitor {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 320px;
+        background: rgba(13, 37, 64, 0.95);
+        border-radius: 12px;
+        border: 1px solid rgba(42, 200, 255, 0.4);
+        overflow: hidden;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5),
+          0 0 10px rgba(42, 200, 255, 0.15);
+        backdrop-filter: blur(5px);
+      }
+
+      .monitor-header {
+        padding: 12px 15px;
+        background: rgba(42, 200, 255, 0.15);
+        border-bottom: 1px solid #1a4c7d;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: bold;
+        font-size: 14px;
+        letter-spacing: 0.5px;
+        background: linear-gradient(
+          90deg,
+          rgba(42, 200, 255, 0.1),
+          rgba(42, 200, 255, 0.05)
+        );
+      }
+
+      .monitor-video {
+        width: 100%;
+        height: 180px;
+        background: #051022;
+      }
+
+      .monitor-video img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .monitor-info {
+        padding: 12px 15px;
+        font-size: 13px;
+        background: rgba(13, 37, 64, 0.5);
+      }
+
+      .info-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        transition: all 0.3s ease;
+      }
+
+      .info-label {
+        color: #99ccff;
+        font-weight: 500;
+      }
+
+      .info-value {
+        color: #e0f2ff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 160px;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+      }
+
+      /* 右侧面板 */
+      .right-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      /* 图表容器 */
+      .chart-container {
+        height: 100%;
+        width: 100%;
+        min-height: 180px;
+      }
+
+      /* 统计卡片 */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .stat-card {
+        text-align: center;
+        padding: 15px 12px;
+        background: linear-gradient(
+          145deg,
+          rgba(31, 75, 124, 0.3),
+          rgba(31, 75, 124, 0.1)
+        );
+        border-radius: 10px;
+        border: 1px solid rgba(42, 200, 255, 0.2);
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4),
+          0 0 8px rgba(42, 200, 255, 0.15);
+        border-color: rgba(42, 200, 255, 0.4);
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #2ac8ff;
+        margin-bottom: 4px;
+        text-shadow: 0 0 8px rgba(42, 200, 255, 0.5);
+        letter-spacing: 0.5px;
+      }
+
+      .stat-label {
+        font-size: 13px;
+        color: #99ccff;
+        font-weight: 500;
+      }
+
+      /* 车辆列表 */
+      .vehicle-list {
+        max-height: 100%;
+        overflow-y: auto;
+        margin-top: 10px;
+      }
+
+      .vehicle-item {
+        padding: 12px 10px;
+        border-bottom: 1px solid #1a4c7d;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .vehicle-item::before {
+        content: "";
+        position: absolute;
+        left: -100%;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(42, 200, 255, 0.1),
+          transparent
+        );
+        transition: left 0.5s;
+      }
+
+      .vehicle-item:hover {
+        background: rgba(31, 75, 124, 0.3);
+      }
+
+      .vehicle-item:hover::before {
+        left: 100%;
+      }
+
+      .vehicle-item:last-child {
+        border-bottom: none;
+      }
+
+      .vehicle-plate {
+        font-weight: bold;
+        color: #2ac8ff;
+        font-size: 14px;
+        text-shadow: 0 0 5px rgba(42, 200, 255, 0.3);
+        letter-spacing: 1px;
+      }
+
+      .vehicle-status {
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-size: 12px;
+        white-space: nowrap;
+        font-weight: 500;
+        transition: all 0.3s;
+        border: 1px solid transparent;
+      }
+
+      .status-normal {
+        background: linear-gradient(
+          145deg,
+          rgba(0, 200, 0, 0.2),
+          rgba(0, 200, 0, 0.1)
+        );
+        color: #00cc00;
+        border-color: rgba(0, 200, 0, 0.3);
+      }
+
+      .status-normal:hover {
+        box-shadow: 0 0 8px rgba(0, 200, 0, 0.3);
+        border-color: rgba(0, 200, 0, 0.6);
+      }
+
+      .status-alert {
+        background: linear-gradient(
+          145deg,
+          rgba(255, 100, 0, 0.2),
+          rgba(255, 100, 0, 0.1)
+        );
+        color: #ff6600;
+        border-color: rgba(255, 100, 0, 0.3);
+      }
+
+      .status-alert:hover {
+        box-shadow: 0 0 8px rgba(255, 100, 0, 0.3);
+        border-color: rgba(255, 100, 0, 0.6);
+      }
+
+      .status-danger {
+        background: linear-gradient(
+          145deg,
+          rgba(255, 0, 0, 0.2),
+          rgba(255, 0, 0, 0.1)
+        );
+        color: #ff3333;
+        border-color: rgba(255, 0, 0, 0.3);
+      }
+
+      .status-danger:hover {
+        box-shadow: 0 0 8px rgba(255, 0, 0, 0.3);
+        border-color: rgba(255, 0, 0, 0.6);
+      }
+
+      /* 警告列表 */
+      .alert-list {
+        max-height: 100%;
+        overflow-y: auto;
+        margin-top: 10px;
+      }
+
+      .alert-item {
+        padding: 12px 10px;
+        border-bottom: 1px solid #1a4c7d;
+        transition: all 0.3s;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .alert-item::before {
+        content: "";
+        position: absolute;
+        left: -100%;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 51, 51, 0.1),
+          transparent
+        );
+        transition: left 0.5s;
+      }
+
+      .alert-item:hover {
+        background: rgba(31, 75, 124, 0.3);
+      }
+
+      .alert-item:hover::before {
+        left: 100%;
+      }
+
+      .alert-item:last-child {
+        border-bottom: none;
+      }
+
+      .alert-type {
+        font-weight: bold;
+        color: #ff3333;
+        margin-bottom: 4px;
+        font-size: 13px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-shadow: 0 0 5px rgba(255, 51, 51, 0.3);
+      }
+
+      .alert-time {
+        font-size: 12px;
+        color: #99ccff;
+        font-weight: 500;
+      }
+
+      /* 滚动条样式优化 */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(31, 75, 124, 0.2);
+        border-radius: 3px;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #1a4c7d;
+        border-radius: 3px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #2ac8ff;
+      }
+
+      /* 响应式布局 */
+      @media (max-width: 1400px) {
+        .content {
+          grid-template-columns: 250px 1fr 280px;
+        }
+        .realtime-monitor {
+          width: 280px;
+        }
+      }
+
+      @media (max-width: 1200px) {
+        .main-content {
+          grid-template-columns: 60px 1fr;
+        }
+        .content {
+          grid-template-columns: 1fr;
+          grid-template-rows: 1fr auto;
+        }
+        .left-panel,
+        .right-panel {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          grid-row: 2;
+        }
+        .map-container {
+          grid-row: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- 顶部标题栏 -->
+      <div class="header">智慧交通综合管理系统</div>
+
+      <!-- 主内容区 -->
+      <div class="main-content">
+        <!-- 左侧边栏 -->
+        <div class="sidebar">
+          <div class="module-menu">
+            <div class="module-item active" data-module="dashboard">
+              <i class="fa fa-dashboard"></i>
+              <span>综合监控</span>
+            </div>
+            <div class="module-item" data-module="vehicle-management">
+              <i class="fa fa-car"></i>
+              <span>车辆管理</span>
+            </div>
+            <div class="module-item" data-module="accident-management">
+              <i class="fa fa-exclamation-triangle"></i>
+              <span>事故管理</span>
+            </div>
+            <div class="module-item" data-module="traffic-analysis">
+              <i class="fa fa-bar-chart"></i>
+              <span>交通分析</span>
+            </div>
+            <div class="module-item" data-module="system-settings">
+              <i class="fa fa-cog"></i>
+              <span>系统设置</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 内容区域 -->
+        <div class="content">
+          <!-- 左侧面板 -->
+          <div class="left-panel">
+            <!-- 车辆属性统计 -->
+            <div class="card">
+              <div class="card-title">
+                <i class="fa fa-pie-chart"></i> 车辆属性统计
+              </div>
+              <div class="chart-container" id="vehicle-type-chart"></div>
+            </div>
+
+            <!-- 行人统计 -->
+            <div class="card">
+              <div class="card-title"><i class="fa fa-users"></i> 行人统计</div>
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <div class="stat-value">459</div>
+                  <div class="stat-label">早高峰</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-value">560</div>
+                  <div class="stat-label">晚高峰</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-value">235</div>
+                  <div class="stat-label">平峰期</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-value">522</div>
+                  <div class="stat-label">节假日</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 重点关注车辆 -->
+            <div class="card">
+              <div class="card-title">
+                <i class="fa fa-flag"></i> 重点关注车辆
+              </div>
+              <div class="vehicle-list">
+                <div class="vehicle-item">
+                  <div class="vehicle-plate">赣A·34567</div>
+                  <div class="vehicle-status status-danger">高风险</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-plate">赣A·45678</div>
+                  <div class="vehicle-status status-alert">中风险</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-plate">赣A·56789</div>
+                  <div class="vehicle-status status-alert">中风险</div>
+                </div>
+                <div class="vehicle-item">
+                  <div class="vehicle-plate">赣A·67890</div>
+                  <div class="vehicle-status status-normal">正常</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 最新预警信息 -->
+            <div class="card">
+              <div class="card-title">
+                <i class="fa fa-bell"></i> 最新预警信息
+              </div>
+              <div class="alert-list">
+                <div class="alert-item">
+                  <div class="alert-type">危化品车超速预警</div>
+                  <div class="alert-time">2025-07-06 15:30</div>
+                </div>
+                <div class="alert-item">
+                  <div class="alert-type">渣土车超载预警</div>
+                  <div class="alert-time">2024-07-06 14:15</div>
+                </div>
+                <div class="alert-item">
+                  <div class="alert-type">公交车未按规定路线行驶</div>
+                  <div class="alert-time">2025-07-06 12:45</div>
+                </div>
+                <div class="alert-item">
+                  <div class="alert-type">校车停留超时预警</div>
+                  <div class="alert-time">2024-07-06 11:20</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 中央地图区域 -->
+          <div class="map-container">
+            <img src="../map1.jpg" alt="地图" />
+
+            <!-- 车辆标记 -->
+            <div
+              class="vehicle-marker"
+              data-id="1"
+              style="top: 30%; left: 40%"
+            ></div>
+            <div
+              class="vehicle-marker"
+              data-id="2"
+              style="top: 45%; left: 60%"
+            ></div>
+            <div
+              class="vehicle-marker"
+              data-id="3"
+              style="top: 60%; left: 50%"
+            ></div>
+            <div
+              class="alert-marker"
+              data-id="4"
+              style="top: 35%; left: 70%"
+            ></div>
+            <div
+              class="vehicle-marker"
+              data-id="5"
+              style="top: 55%; left: 30%"
+            ></div>
+            <div
+              class="alert-marker"
+              data-id="6"
+              style="top: 40%; left: 25%"
+            ></div>
+            <div
+              class="vehicle-marker"
+              data-id="7"
+              style="top: 65%; left: 45%"
+            ></div>
+            <div
+              class="vehicle-marker"
+              data-id="8"
+              style="top: 25%; left: 55%"
+            ></div>
+
+            <!-- 实时监控窗口 -->
+            <div class="realtime-monitor">
+              <div class="monitor-header">
+                <span>实时监控</span>
+                <i class="fa fa-refresh fa-spin"></i>
+              </div>
+              <div class="monitor-video">
+                <img
+                  src="https://img.remit.ee/api/file/BQACAgUAAyEGAASHRsPbAAEDUndo62owGaHCAZHqbhCM2X7s-LRWqQAC0hwAAtUQWVeSmN4IDR-47zYE.jpg"
+                  alt="R-C.jpg"
+                />
+              </div>
+              <div class="monitor-info">
+                <div class="info-item">
+                  <span class="info-label">位置:</span>
+                  <span class="info-value">高新区大道路口</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">设备状态:</span>
+                  <span class="info-value">正常</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">时间:</span>
+                  <span class="info-value" id="monitor-time"
+                    >2023-07-06 15:30</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右侧面板 -->
+          <div class="right-panel">
+            <!-- 车辆异常统计 -->
+            <div class="card">
+              <div class="card-title">
+                <i class="fa fa-exclamation-circle"></i> 车辆异常统计
+              </div>
+              <div class="chart-container" id="vehicle-anomaly-chart"></div>
+            </div>
+
+            <!-- 道路设备状态 -->
+            <div class="card">
+              <div class="card-title">
+                <i class="fa fa-television"></i> 道路设备状态
+              </div>
+              <div class="chart-container" id="device-status-chart"></div>
+            </div>
+
+            <!-- 道路车流量统计 -->
+            <div class="card">
+              <div class="card-title">
+                <i class="fa fa-road"></i> 道路车流量统计
+              </div>
+              <div class="chart-container" id="traffic-flow-chart"></div>
+            </div>
+
+            <!-- 最新预警信息 -->
+            <div class="card">
+              <div class="card-title">
+                <i class="fa fa-bell"></i> 历史预警信息
+              </div>
+              <div class="alert-list">
+                <div class="alert-item">
+                  <div class="alert-type">危化品车超速预警</div>
+                  <div class="alert-time">2023-07-06 15:30</div>
+                </div>
+                <div class="alert-item">
+                  <div class="alert-type">渣土车超载预警</div>
+                  <div class="alert-time">2023-07-06 14:15</div>
+                </div>
+                <div class="alert-item">
+                  <div class="alert-type">公交车未按规定路线行驶</div>
+                  <div class="alert-time">2023-07-06 12:45</div>
+                </div>
+                <div class="alert-item">
+                  <div class="alert-type">校车停留超时预警</div>
+                  <div class="alert-time">2023-07-06 11:20</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 模块切换功能
+      document.querySelectorAll(".module-item").forEach((item) => {
+        item.addEventListener("click", function () {
+          // 移除所有active类
+          document.querySelectorAll(".module-item").forEach((module) => {
+            module.classList.remove("active");
+          });
+
+          // 激活当前模块
+          this.classList.add("active");
+        });
+      });
+
+      // 车辆标记点击事件
+      document
+        .querySelectorAll(".vehicle-marker, .alert-marker")
+        .forEach((marker) => {
+          marker.addEventListener("click", function () {
+            const vehicleId = this.getAttribute("data-id");
+            // 高亮选中的标记
+            document
+              .querySelectorAll(".vehicle-marker, .alert-marker")
+              .forEach((m) => {
+                m.classList.remove("selected");
+              });
+            this.classList.add("selected");
+
+            // 这里可以添加显示车辆详情的逻辑
+            console.log(`查看车辆ID: ${vehicleId} 的详细信息`);
+          });
+        });
+
+      // 初始化图表
+      function initCharts() {
+        // 车辆类型统计图表
+        const vehicleTypeChart = echarts.init(
+          document.getElementById("vehicle-type-chart")
+        );
+        vehicleTypeChart.setOption({
+          backgroundColor: "transparent",
+          tooltip: {
+            trigger: "item",
+            formatter: "{a} <br/>{b}: {c} ({d}%)",
+          },
+          color: ["#2AC8FF", "#66CCFF", "#9966FF", "#FF9933", "#FFCC00"],
+          series: [
+            {
+              name: "车辆类型",
+              type: "pie",
+              radius: ["30%", "70%"],
+              avoidLabelOverlap: false,
+              itemStyle: {
+                borderRadius: 4,
+                borderColor: "#051022",
+                borderWidth: 2,
+              },
+              label: {
+                show: true,
+                position: "outside",
+                formatter: "{b}\n{d}%",
+                color: "#e0f2ff",
+                fontSize: 12,
+              },
+              emphasis: {
+                label: {
+                  show: true,
+                  fontSize: 14,
+                  fontWeight: "bold",
+                },
+              },
+              data: [
+                { value: 324, name: "轿车" },
+                { value: 235, name: "货车" },
+                { value: 156, name: "公交车" },
+                { value: 98, name: "危化品车" },
+                { value: 67, name: "其他" },
+              ],
+            },
+          ],
+        });
+
+        // 车辆异常统计图表
+        const vehicleAnomalyChart = echarts.init(
+          document.getElementById("vehicle-anomaly-chart")
+        );
+        vehicleAnomalyChart.setOption({
+          backgroundColor: "transparent",
+          tooltip: {
+            trigger: "axis",
+            axisPointer: {
+              type: "shadow",
+            },
+          },
+          grid: {
+            left: "8%",
+            right: "4%",
+            bottom: "12%",
+            containLabel: true,
+          },
+          xAxis: {
+            type: "category",
+            data: ["超速", "超载", "违规", "超时", "其他"],
+            axisLabel: {
+              color: "#e0f2ff",
+              fontSize: 12,
+              interval: 0,
+              rotate: 0,
+            },
+            axisLine: {
+              lineStyle: {
+                color: "#1F4B7C",
+              },
+            },
+          },
+          yAxis: {
+            type: "value",
+            axisLabel: {
+              color: "#e0f2ff",
+              fontSize: 12,
+            },
+            splitLine: {
+              lineStyle: {
+                color: "#1F4B7C",
+              },
+            },
+          },
+          series: [
+            {
+              name: "异常次数",
+              type: "bar",
+              data: [12, 8, 15, 5, 3],
+              itemStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: "#FF3333" },
+                  { offset: 1, color: "#FF9933" },
+                ]),
+              },
+            },
+          ],
+        });
+
+        // 道路设备状态图表
+        const deviceStatusChart = echarts.init(
+          document.getElementById("device-status-chart")
+        );
+        deviceStatusChart.setOption({
+          backgroundColor: "transparent",
+          tooltip: {
+            trigger: "axis",
+            axisPointer: {
+              type: "shadow",
+            },
+          },
+          grid: {
+            left: "8%",
+            right: "4%",
+            bottom: "12%",
+            containLabel: true,
+          },
+          xAxis: {
+            type: "category",
+            data: ["正常", "故障", "离线"],
+            axisLabel: {
+              color: "#e0f2ff",
+              fontSize: 12,
+              interval: 0,
+            },
+            axisLine: {
+              lineStyle: {
+                color: "#1F4B7C",
+              },
+            },
+          },
+          yAxis: {
+            type: "value",
+            axisLabel: {
+              color: "#e0f2ff",
+              fontSize: 12,
+            },
+            splitLine: {
+              lineStyle: {
+                color: "#1F4B7C",
+              },
+            },
+          },
+          series: [
+            {
+              name: "设备数量",
+              type: "bar",
+              data: [85, 10, 5],
+              itemStyle: {
+                color: function (params) {
+                  const colors = ["#00CC00", "#FF9933", "#FF3333"];
+                  return colors[params.dataIndex];
+                },
+              },
+            },
+          ],
+        });
+
+        // 道路车流量统计图表
+        const trafficFlowChart = echarts.init(
+          document.getElementById("traffic-flow-chart")
+        );
+        trafficFlowChart.setOption({
+          backgroundColor: "transparent",
+          tooltip: {
+            trigger: "axis",
+          },
+          grid: {
+            left: "8%",
+            right: "4%",
+            bottom: "12%",
+            containLabel: true,
+          },
+          xAxis: {
+            type: "category",
+            data: ["早高峰", "平峰", "晚高峰", "夜间"],
+            axisLabel: {
+              color: "#e0f2ff",
+              fontSize: 12,
+            },
+            axisLine: {
+              lineStyle: {
+                color: "#1F4B7C",
+              },
+            },
+          },
+          yAxis: {
+            type: "value",
+            axisLabel: {
+              color: "#e0f2ff",
+              fontSize: 12,
+            },
+            splitLine: {
+              lineStyle: {
+                color: "#1F4B7C",
+              },
+            },
+          },
+          series: [
+            {
+              name: "车流量",
+              type: "line",
+              data: [3500, 1800, 4200, 800],
+              smooth: true,
+              lineStyle: {
+                color: "#2AC8FF",
+                width: 2,
+              },
+              areaStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: "rgba(42, 200, 255, 0.4)" },
+                  { offset: 1, color: "rgba(42, 200, 255, 0.1)" },
+                ]),
+              },
+              symbol: "circle",
+              symbolSize: 6,
+              itemStyle: {
+                color: "#2AC8FF",
+              },
+            },
+          ],
+        });
+
+        // 窗口大小变化时调整图表
+        window.addEventListener("resize", function () {
+          vehicleTypeChart.resize();
+          vehicleAnomalyChart.resize();
+          deviceStatusChart.resize();
+          trafficFlowChart.resize();
+        });
+      }
+
+      // 页面加载完成后初始化
+      window.addEventListener("load", function () {
+        initCharts();
+
+        // 初始化并更新时间
+        updateTime();
+        // 每秒更新一次时间
+        setInterval(updateTime, 1000);
+      });
+
+      // 更新实时监控时间
+      function updateTime() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const day = String(now.getDate()).padStart(2, "0");
+        const hours = String(now.getHours()).padStart(2, "0");
+        const minutes = String(now.getMinutes()).padStart(2, "0");
+        const seconds = String(now.getSeconds()).padStart(2, "0");
+
+        const formattedTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        const timeElement = document.getElementById("monitor-time");
+        if (timeElement) {
+          timeElement.textContent = formattedTime;
+        }
+      }
+    </script>
+  </body>
+</html>
